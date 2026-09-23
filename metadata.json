@@ -1,0 +1,6 @@
+{
+  "name": "RotVault - Brainrot Sound Studio & Creator Hub",
+  "description": "Librería y recortador visual de sonidos brainrot, memes y efectos para creadores de contenido.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

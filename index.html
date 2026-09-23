@@ -1,0 +1,53 @@
+<!doctype html>
+<html lang="es" class="dark">
+  <head>
+    <script>
+      (function() {
+        try {
+          var currentFetch = window.fetch;
+          Object.defineProperty(window, 'fetch', {
+            get: function() {
+              return currentFetch;
+            },
+            set: function(newFetch) {
+              currentFetch = newFetch;
+            },
+            configurable: true,
+            enumerable: true
+          });
+        } catch (e) {
+          try {
+            var proto = Object.getPrototypeOf(window);
+            var protoFetch = proto.fetch;
+            Object.defineProperty(proto, 'fetch', {
+              get: function() {
+                return protoFetch;
+              },
+              set: function(newFetch) {
+                protoFetch = newFetch;
+              },
+              configurable: true,
+              enumerable: true
+            });
+          } catch (err) {}
+        }
+      })();
+    </script>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>RotVault - Brainrot Sound Studio & Creator Hub</title>
+    <meta name="description" content="Librería y recortador visual de sonidos brainrot, memes y efectos para creadores de contenido." />
+    <meta property="og:title" content="RotVault - Brainrot Sound Studio & Creator Hub" />
+    <meta property="og:description" content="Librería y recortador visual de sonidos brainrot, memes y efectos para creadores de contenido." />
+    <meta property="og:type" content="website" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  </head>
+  <body class="bg-[#0c0d12] text-neutral-100 antialiased selection:bg-amber-500/20 selection:text-amber-300">
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>
+
