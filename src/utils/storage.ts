@@ -52,7 +52,7 @@ const INITIAL_PRESET_DEFS = [
     title: 'Vine Boom 💥',
     category: 'impact' as const,
     tags: ['boom', 'reverb', 'bass', 'meme'],
-    coverImage: '/src/assets/images/brainrot_sigma_meme_1790192229225.jpg',
+    coverImage: '/assets/images/vine_boom.jpg',
     synthType: 'vine-boom' as const,
     hotkey: '1',
     folder: 'Impacts',
@@ -62,7 +62,7 @@ const INITIAL_PRESET_DEFS = [
     title: 'Metal Pipe Falling 🪈',
     category: 'brainrot' as const,
     tags: ['metal', 'pipe', 'clatter', 'earrape', 'classic'],
-    coverImage: '/src/assets/images/brainrot_boom_pipe_1790192243786.jpg',
+    coverImage: '/assets/images/metal_pipe.jpg',
     synthType: 'metal-pipe' as const,
     hotkey: '2',
     folder: 'Brainrot',
@@ -212,8 +212,13 @@ export async function getAllSounds(): Promise<SoundItem[]> {
 
     request.onsuccess = async () => {
       const list: SoundItem[] = request.result || [];
-      // Attach blob URLs
+      // Attach blob URLs & fix legacy paths if any
       for (const item of list) {
+        if (item.coverImage && item.coverImage.includes('/src/assets/images/')) {
+          if (item.id === 'vine-boom') item.coverImage = '/assets/images/vine_boom.jpg';
+          else if (item.id === 'metal-pipe') item.coverImage = '/assets/images/metal_pipe.jpg';
+          else item.coverImage = '/assets/images/sigma_gigachad.jpg';
+        }
         if (!audioUrlCache.has(item.id)) {
           const blobReq = blobStore.get(item.id);
           await new Promise<void>((res) => {

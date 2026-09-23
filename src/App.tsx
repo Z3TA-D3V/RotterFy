@@ -7,6 +7,7 @@ import { Sidebar, ActiveTab } from './components/Sidebar';
 import { TopHeader } from './components/TopHeader';
 import { SoundLibrary } from './components/SoundLibrary';
 import { WaveformTrimmer } from './components/WaveformTrimmer';
+import { StudioWorkspace } from './components/StudioWorkspace';
 import { AudioTrimmerModal } from './components/AudioTrimmerModal';
 import { OpenFileModal } from './components/OpenFileModal';
 import { SoundboardMode } from './components/SoundboardMode';
@@ -19,6 +20,7 @@ import {
   initAndSeedDatabase, 
   getAllSounds, 
   getSoundAudioBuffer, 
+  getSoundBlob,
   deleteSoundFromDB, 
   updateSoundMetadata,
   incrementPlayCount,
@@ -207,14 +209,11 @@ export default function App() {
     stopAudio();
     let blob = sound.audioBlob;
     if (!blob) {
-      const buffer = await getSoundAudioBuffer(sound.id);
-      if (buffer) {
-        // Blob will be extracted
-      }
+      blob = (await getSoundBlob(sound.id)) || undefined;
     }
     setTrimmerSourceSound(sound);
-    setTrimmerAudioBlob(sound.audioBlob || null);
-    setIsTrimmerOpen(true);
+    setTrimmerAudioBlob(blob || null);
+    setActiveTab('trimmer');
   };
 
   // Open Trimmer for new file
@@ -222,7 +221,7 @@ export default function App() {
     stopAudio();
     setTrimmerSourceSound(null);
     setTrimmerAudioBlob(null);
-    setIsTrimmerOpen(true);
+    setActiveTab('trimmer');
   };
 
   // Callback when a new sound is saved in trimmer
@@ -242,11 +241,10 @@ export default function App() {
       <Sidebar
         activeTab={activeTab}
         onTabChange={(tab) => {
-          if (tab === 'trimmer') {
-            handleOpenTrimmerNew();
-          } else if (tab === 'prompt') {
+          if (tab === 'prompt') {
             setIsPromptModalOpen(true);
           } else {
+            stopAudio();
             setActiveTab(tab);
           }
         }}
@@ -283,6 +281,16 @@ export default function App() {
                 onToggleFavorite={handleToggleFavorite}
                 onDeleteSound={handleDeleteSound}
                 searchQuery={searchQuery}
+              />
+            )}
+
+            {/* Tab: Trimmer Studio Workspace */}
+            {activeTab === 'trimmer' && (
+              <StudioWorkspace
+                onSoundSaved={handleSoundSaved}
+                onOpenFileLocation={handleOpenFileLocation}
+                initialAudioBlob={trimmerAudioBlob}
+                initialSound={trimmerSourceSound}
               />
             )}
 

@@ -9,7 +9,9 @@ import {
   HardDrive, 
   ExternalLink,
   Sparkles,
-  Volume2
+  Volume2,
+  FolderCheck,
+  RefreshCw
 } from 'lucide-react';
 import { SoundItem } from '../types';
 import { getSoundBlob } from '../utils/storage';
@@ -20,6 +22,10 @@ interface OpenFileModalProps {
   sound: SoundItem | null;
 }
 
+// Module-level persistent Directory Handle in memory across modal opens
+let globalLinkedDirectoryHandle: FileSystemDirectoryHandle | null = null;
+let globalLinkedDirectoryName: string | null = null;
+
 export const OpenFileModal: React.FC<OpenFileModalProps> = ({
   isOpen,
   onClose,
@@ -29,11 +35,12 @@ export const OpenFileModal: React.FC<OpenFileModalProps> = ({
   const [copiedClipboardAudio, setCopiedClipboardAudio] = useState(false);
   const [isSavingDirect, setIsSavingDirect] = useState(false);
   const [saveDirectStatus, setSaveDirectStatus] = useState<string | null>(null);
+  const [linkedDirName, setLinkedDirName] = useState<string | null>(globalLinkedDirectoryName);
 
   if (!isOpen || !sound) return null;
 
   const sanitizedFileName = `${sound.title.toLowerCase().replace(/[^a-z0-9]/g, '_')}.wav`;
-  const defaultFolderPath = 'C:\\Usuarios\\Creador\\Descargas\\Sonidos';
+  const defaultFolderPath = linkedDirName ? `C:\\...\\${linkedDirName}` : 'C:\\Usuarios\\Creador\\Descargas\\Sonidos';
   const fullFilePath = `${defaultFolderPath}\\${sanitizedFileName}`;
   const windowsCommand = `explorer.exe /select,"${fullFilePath}"`;
 
@@ -53,10 +60,41 @@ export const OpenFileModal: React.FC<OpenFileModalProps> = ({
     a.click();
     document.body.removeChild(a);
     URL.revokeObjectURL(url);
+    setSaveDirectStatus('¡Archivo descargado a tu carpeta local de descargas!');
+    setTimeout(() => setSaveDirectStatus(null), 3500);
   };
 
-  // Direct Save via File System Access API
-  const handleSaveToDirectory = async () => {
+  // Link Directory via showDirectoryPicker (File System Access API)
+  const handleLinkDirectory = async () => {
+    try {
+      if ('showDirectoryPicker' in window) {
+        // @ts-expect-error File System Access API
+        const dirHandle = await window.showDirectoryPicker({
+          mode: 'readwrite',
+        });
+        globalLinkedDirectoryHandle = dirHandle;
+        globalLinkedDirectoryName = dirHandle.name;
+        setLinkedDirName(dirHandle.name);
+        setSaveDirectStatus(`¡Carpeta "${dirHandle.name}" vinculada con éxito!`);
+        setTimeout(() => setSaveDirectStatus(null), 3500);
+      } else {
+        setSaveDirectStatus('Tu navegador actual no soporta showDirectoryPicker. Usa la opción Guardar Como o Descarga.');
+        setTimeout(() => setSaveDirectStatus(null), 4000);
+      }
+    } catch (err: unknown) {
+      if ((err as Error).name !== 'AbortError') {
+        console.error('Error linking directory:', err);
+      }
+    }
+  };
+
+  // Save directly to the linked directory (0-click picker!)
+  const handleSaveToLinkedDirectory = async () => {
+    if (!globalLinkedDirectoryHandle) {
+      await handleLinkDirectory();
+      if (!globalLinkedDirectoryHandle) return;
+    }
+
     try {
       setIsSavingDirect(true);
       let blob = sound.audioBlob;
@@ -65,7 +103,32 @@ export const OpenFileModal: React.FC<OpenFileModalProps> = ({
       }
       if (!blob) throw new Error('Audio no disponible');
 
-      // Check if showSaveFilePicker is available
+      const fileHandle = await globalLinkedDirectoryHandle.getFileHandle(sanitizedFileName, { create: true });
+      const writable = await fileHandle.createWritable();
+      await writable.write(blob);
+      await writable.close();
+
+      setSaveDirectStatus(`¡Guardado directamente en "${globalLinkedDirectoryName}/${sanitizedFileName}"!`);
+      setTimeout(() => setSaveDirectStatus(null), 4000);
+    } catch (err: unknown) {
+      console.error('Error saving to linked directory:', err);
+      // Fallback
+      handleDownload();
+    } finally {
+      setIsSavingDirect(false);
+    }
+  };
+
+  // Save via showSaveFilePicker
+  const handleSaveWithPicker = async () => {
+    try {
+      setIsSavingDirect(true);
+      let blob = sound.audioBlob;
+      if (!blob) {
+        blob = (await getSoundBlob(sound.id)) || undefined;
+      }
+      if (!blob) throw new Error('Audio no disponible');
+
       if ('showSaveFilePicker' in window) {
         // @ts-expect-error File System Access API
         const handle = await window.showSaveFilePicker({
@@ -81,10 +144,9 @@ export const OpenFileModal: React.FC<OpenFileModalProps> = ({
         await writable.write(blob);
         await writable.close();
         setSaveDirectStatus('¡Guardado directamente en tu carpeta seleccionada!');
+        setTimeout(() => setSaveDirectStatus(null), 4000);
       } else {
-        // Fallback to instant download
         handleDownload();
-        setSaveDirectStatus('¡Descargado a tu carpeta local de descargas!');
       }
     } catch (err: unknown) {
       if ((err as Error).name !== 'AbortError') {
@@ -115,7 +177,7 @@ export const OpenFileModal: React.FC<OpenFileModalProps> = ({
           setTimeout(() => setCopiedClipboardAudio(false), 2500);
           return;
         } catch {
-          // If browser clipboard restricts audio mime, copy file path as fallback
+          // If browser clipboard restricts binary audio mime, copy clean filename as fallback
         }
       }
       await navigator.clipboard.writeText(sanitizedFileName);
@@ -145,10 +207,10 @@ export const OpenFileModal: React.FC<OpenFileModalProps> = ({
             </div>
             <div>
               <h2 className="text-sm font-semibold text-white tracking-tight">
-                Abrir en Carpeta Local
+                Acceso Rápido a Archivos Locales
               </h2>
               <p className="text-xs text-neutral-400">
-                Acceso directo al archivo de sonido para tus proyectos de edición.
+                Exporta y sincroniza con tu carpeta de edición de Premiere o CapCut.
               </p>
             </div>
           </div>
@@ -163,12 +225,16 @@ export const OpenFileModal: React.FC<OpenFileModalProps> = ({
 
         {/* Selected Sound Card */}
         <div className="flex items-center gap-3 p-3 rounded-2xl bg-white/4 border border-white/8">
-          <div className="w-12 h-12 rounded-xl bg-indigo-500/20 border border-white/10 overflow-hidden flex items-center justify-center text-xl shrink-0">
+          <div className="w-12 h-12 rounded-xl bg-neutral-900 border border-white/10 overflow-hidden flex items-center justify-center text-xl shrink-0">
             {sound.coverImage && sound.coverImage.startsWith('/') ? (
               <img
                 src={sound.coverImage}
                 alt={sound.title}
                 className="w-full h-full object-cover"
+                onError={(e) => {
+                  // Fallback if image fails to render
+                  (e.target as HTMLElement).style.display = 'none';
+                }}
               />
             ) : (
               <span>{sound.coverImage || '🔊'}</span>
@@ -190,27 +256,53 @@ export const OpenFileModal: React.FC<OpenFileModalProps> = ({
 
         {/* Action Options */}
         <div className="space-y-3">
-          {/* Action 1: File System Access Picker */}
-          <button
-            onClick={handleSaveToDirectory}
-            disabled={isSavingDirect}
-            className="w-full p-3.5 rounded-2xl bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-500 hover:to-violet-500 text-white text-left transition-all shadow-lg shadow-indigo-600/20 flex items-center justify-between group"
-          >
-            <div className="flex items-center gap-3">
-              <div className="w-9 h-9 rounded-xl bg-white/15 flex items-center justify-center text-white shrink-0">
+          {/* Action 1: Linked Directory 1-Click Save */}
+          {linkedDirName ? (
+            <div className="p-3.5 rounded-2xl bg-gradient-to-r from-emerald-950/40 via-indigo-950/40 to-black/40 border border-emerald-500/30 space-y-2">
+              <div className="flex items-center justify-between text-xs">
+                <span className="flex items-center gap-1.5 text-emerald-300 font-semibold">
+                  <FolderCheck className="w-4 h-4 text-emerald-400" />
+                  Carpeta Vinculada: <span className="font-mono text-white">{linkedDirName}</span>
+                </span>
+                <button
+                  onClick={handleLinkDirectory}
+                  className="text-[11px] text-neutral-400 hover:text-white flex items-center gap-1"
+                >
+                  <RefreshCw className="w-3 h-3" />
+                  Cambiar
+                </button>
+              </div>
+
+              <button
+                onClick={handleSaveToLinkedDirectory}
+                disabled={isSavingDirect}
+                className="w-full py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-semibold shadow-md shadow-emerald-600/25 transition-all flex items-center justify-center gap-2"
+              >
                 <HardDrive className="w-4 h-4" />
-              </div>
-              <div>
-                <span className="text-xs font-semibold block">
-                  Guardar en Mi Carpeta de Edición
-                </span>
-                <span className="text-[11px] text-indigo-200">
-                  Usa File System API para ubicarlo directo en tu carpeta de Premiere/CapCut
-                </span>
-              </div>
+                <span>Guardar Directo en "{linkedDirName}" (1 Clic)</span>
+              </button>
             </div>
-            <ExternalLink className="w-4 h-4 text-indigo-200 group-hover:translate-x-0.5 transition-transform" />
-          </button>
+          ) : (
+            <button
+              onClick={handleLinkDirectory}
+              className="w-full p-3.5 rounded-2xl bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-500 hover:to-violet-500 text-white text-left transition-all shadow-lg shadow-indigo-600/20 flex items-center justify-between group"
+            >
+              <div className="flex items-center gap-3">
+                <div className="w-9 h-9 rounded-xl bg-white/15 flex items-center justify-center text-white shrink-0">
+                  <HardDrive className="w-4 h-4" />
+                </div>
+                <div>
+                  <span className="text-xs font-semibold block">
+                    Vincular Carpeta de Edición Local
+                  </span>
+                  <span className="text-[11px] text-indigo-200">
+                    File System Access API: guarda con 1 solo clic en tu carpeta de Premiere/CapCut
+                  </span>
+                </div>
+              </div>
+              <ExternalLink className="w-4 h-4 text-indigo-200 group-hover:translate-x-0.5 transition-transform" />
+            </button>
+          )}
 
           {/* Action 2: Instant Clean Download */}
           <button
@@ -226,7 +318,7 @@ export const OpenFileModal: React.FC<OpenFileModalProps> = ({
                   Descarga Inmediata (.WAV)
                 </span>
                 <span className="text-[11px] text-neutral-400">
-                  Descarga directa a la carpeta de descargas de tu sistema operativo
+                  Descarga directa a la carpeta de descargas de tu sistema
                 </span>
               </div>
             </div>

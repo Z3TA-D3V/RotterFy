@@ -18,6 +18,7 @@ import {
 import { WaveformTrimmer } from './WaveformTrimmer';
 import { SoundItem, SoundCategory } from '../types';
 import { 
+  getAudioContext,
   decodeAudioBlob, 
   sliceAndProcessAudioBuffer, 
   bufferToWaveBlob, 
@@ -35,10 +36,10 @@ interface AudioTrimmerModalProps {
 }
 
 const PRESET_COVERS = [
-  { id: 'sigma', label: 'Sigma 🗿', url: '/src/assets/images/brainrot_sigma_meme_1790192229225.jpg' },
-  { id: 'pipe', label: 'Metal Pipe 🪈', url: '/src/assets/images/brainrot_boom_pipe_1790192243786.jpg' },
+  { id: 'sigma', label: 'Sigma 🗿', url: '/assets/images/sigma_gigachad.jpg' },
+  { id: 'pipe', label: 'Metal Pipe 🪈', url: '/assets/images/metal_pipe.jpg' },
+  { id: 'boom', label: 'Explosión 💥', url: '/assets/images/vine_boom.jpg' },
   { id: 'skull', label: 'Calavera 💀', emoji: '💀' },
-  { id: 'boom', label: 'Explosión 💥', emoji: '💥' },
   { id: 'doge', label: 'Huh Doge 🐕', emoji: '🐕' },
   { id: 'toilet', label: 'Skibidi 🚽', emoji: '🚽' },
   { id: 'bell', label: 'Taco Bell 🔔', emoji: '🔔' },
@@ -73,7 +74,7 @@ export const AudioTrimmerModal: React.FC<AudioTrimmerModalProps> = ({
   const [tagsString, setTagsString] = useState<string>('corte, brainrot, sfx');
   const [folder, setFolder] = useState<string>('Recortes');
   const [hotkey, setHotkey] = useState<string>('');
-  const [coverImage, setCoverImage] = useState<string>('/src/assets/images/brainrot_sigma_meme_1790192229225.jpg');
+  const [coverImage, setCoverImage] = useState<string>('/assets/images/sigma_gigachad.jpg');
 
   // Success message & cut count
   const [savedCount, setSavedCount] = useState<number>(0);
@@ -189,7 +190,10 @@ export const AudioTrimmerModal: React.FC<AudioTrimmerModalProps> = ({
   const handleSaveCut = async (shouldDownload = false) => {
     if (!loadedBuffer) return;
 
-    const ctx = new (window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext)();
+    const ctx = getAudioContext();
+    if (ctx.state === 'suspended') {
+      await ctx.resume();
+    }
     
     // Process sliced audio buffer with gain, normalization, fades
     const slicedBuffer = sliceAndProcessAudioBuffer(ctx, loadedBuffer, {

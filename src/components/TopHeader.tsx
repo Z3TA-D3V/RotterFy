@@ -23,6 +23,8 @@ export const TopHeader: React.FC<TopHeaderProps> = ({
     switch (activeTab) {
       case 'library':
         return 'Librería de Sonidos';
+      case 'trimmer':
+        return 'Estudio de Recorte & Onda';
       case 'soundboard':
         return 'Soundboard Rápido (Teclas 1-9)';
       case 'scripts':

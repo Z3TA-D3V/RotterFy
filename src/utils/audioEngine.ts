@@ -608,19 +608,34 @@ let currentGainNode: GainNode | null = null;
 export function playAudioBuffer(
   buffer: AudioBuffer,
   options?: {
+    offset?: number;
+    duration?: number;
     playbackRate?: number;
     volume?: number;
     loop?: boolean;
+    loopStart?: number;
+    loopEnd?: number;
     onEnded?: () => void;
   }
 ): { stop: () => void } {
   stopCurrentPlayback();
 
   const ctx = getAudioContext();
+  // Fire-and-forget resume — callers should pre-await if critical
+  if (ctx.state === 'suspended') {
+    ctx.resume().catch(() => { /* ignore */ });
+  }
+
   const source = ctx.createBufferSource();
   source.buffer = buffer;
   source.playbackRate.value = options?.playbackRate ?? 1.0;
-  source.loop = options?.loop ?? false;
+
+  const isLoop = options?.loop ?? false;
+  source.loop = isLoop;
+  if (isLoop && options?.loopStart !== undefined && options?.loopEnd !== undefined) {
+    source.loopStart = options.loopStart;
+    source.loopEnd = options.loopEnd;
+  }
 
   const gain = ctx.createGain();
   gain.gain.value = options?.volume ?? 1.0;
@@ -628,23 +643,39 @@ export function playAudioBuffer(
   source.connect(gain);
   gain.connect(ctx.destination);
 
+  let hasEnded = false;
   source.onended = () => {
+    if (hasEnded) return;
+    hasEnded = true;
     if (currentActiveSource === source) {
       currentActiveSource = null;
+      currentGainNode = null;
     }
     options?.onEnded?.();
   };
 
-  source.start(0);
+  const offset = Math.max(0, options?.offset ?? 0);
+  if (options?.duration !== undefined && !isLoop) {
+    source.start(0, offset, Math.max(0.01, options.duration));
+  } else {
+    source.start(0, offset);
+  }
+
   currentActiveSource = source;
   currentGainNode = gain;
 
   return {
     stop: () => {
+      if (hasEnded) return;
+      hasEnded = true;
       try {
         source.stop();
       } catch {
         // already stopped
+      }
+      if (currentActiveSource === source) {
+        currentActiveSource = null;
+        currentGainNode = null;
       }
     },
   };
