@@ -178,10 +178,10 @@ export const Sidebar: React.FC<SidebarProps> = ({
                 <HardDrive className="w-3.5 h-3.5 text-emerald-400" />
                 Almacenamiento Local
               </span>
-              <span className="text-[10px] font-mono text-emerald-400">IndexedDB Activo</span>
+              <span className="text-[10px] font-mono text-emerald-400">Audio en disco</span>
             </div>
             <p className="text-[11px] text-neutral-500 leading-relaxed">
-              Tus audios cortados y portadas se guardan de forma permanente en tu navegador.
+              Tus audios se guardan como archivos en public/assets/audio.
             </p>
           </div>
         ) : (

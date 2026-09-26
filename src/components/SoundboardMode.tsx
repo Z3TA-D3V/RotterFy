@@ -115,7 +115,7 @@ export const SoundboardMode: React.FC<SoundboardModeProps> = ({
               {/* Hotkey Tag in Top Right */}
               <div className="flex items-start justify-between w-full">
                 <div className="w-12 h-12 rounded-2xl bg-black/40 border border-white/10 overflow-hidden flex items-center justify-center text-2xl shrink-0 group-hover:scale-105 transition-transform shadow-inner">
-                  {pad.coverImage && pad.coverImage.startsWith('/') ? (
+                  {pad.coverImage && (pad.coverImage.startsWith('/') || pad.coverImage.startsWith('data:image/')) ? (
                     <img src={pad.coverImage} alt="" className="w-full h-full object-cover" />
                   ) : (
                     <span>{pad.coverImage || '🔊'}</span>

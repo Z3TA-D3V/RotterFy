@@ -25,7 +25,7 @@ import {
   extractWaveformPeaks,
   synthesizeBrainrotSound
 } from '../utils/audioEngine';
-import { saveSoundToDB } from '../utils/storage';
+import { saveSoundToLibrary } from '../utils/audioStorage';
 
 interface AudioTrimmerModalProps {
   isOpen: boolean;
@@ -79,6 +79,8 @@ export const AudioTrimmerModal: React.FC<AudioTrimmerModalProps> = ({
   // Success message & cut count
   const [savedCount, setSavedCount] = useState<number>(0);
   const [lastSavedName, setLastSavedName] = useState<string | null>(null);
+  const [saveError, setSaveError] = useState<string | null>(null);
+  const [isSaving, setIsSaving] = useState(false);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const coverImageInputRef = useRef<HTMLInputElement | null>(null);
 
@@ -188,7 +190,7 @@ export const AudioTrimmerModal: React.FC<AudioTrimmerModalProps> = ({
 
   // Perform Slice & Save
   const handleSaveCut = async (shouldDownload = false) => {
-    if (!loadedBuffer) return;
+    if (!loadedBuffer || isSaving) return;
 
     const ctx = getAudioContext();
     if (ctx.state === 'suspended') {
@@ -232,7 +234,16 @@ export const AudioTrimmerModal: React.FC<AudioTrimmerModalProps> = ({
       sourceType: 'trimmed-clip',
     };
 
-    await saveSoundToDB(soundRecord, wavBlob, slicedBuffer);
+    setSaveError(null);
+    setIsSaving(true);
+    try {
+      await saveSoundToLibrary(soundRecord, wavBlob, slicedBuffer);
+    } catch (error) {
+      setSaveError(error instanceof Error ? error.message : 'No se pudo guardar el audio');
+      return;
+    } finally {
+      setIsSaving(false);
+    }
     onSoundSaved(soundRecord);
 
     setSavedCount((prev) => prev + 1);
@@ -643,6 +654,7 @@ export const AudioTrimmerModal: React.FC<AudioTrimmerModalProps> = ({
               <div className="flex items-center gap-3">
                 <button
                   onClick={() => handleSaveCut(true)}
+                  disabled={isSaving}
                   className="px-4 py-2.5 rounded-xl bg-white/6 hover:bg-white/12 border border-white/10 text-neutral-200 text-xs font-medium transition-all flex items-center gap-2"
                   title="Guarda en la librería y descarga el archivo .wav a tu disco local"
                 >
@@ -652,12 +664,14 @@ export const AudioTrimmerModal: React.FC<AudioTrimmerModalProps> = ({
 
                 <button
                   onClick={() => handleSaveCut(false)}
+                  disabled={isSaving}
                   className="px-5 py-2.5 rounded-xl bg-gradient-to-r from-indigo-600 via-indigo-500 to-purple-600 hover:from-indigo-500 hover:to-purple-500 text-white text-xs font-semibold shadow-lg shadow-indigo-600/30 transition-all flex items-center gap-2 active:scale-[0.98]"
                 >
                   <Scissors className="w-4 h-4" />
                   Guardar en Librería
                 </button>
               </div>
+              {saveError && <p role="alert" className="text-xs text-rose-300">{saveError}</p>}
             </div>
           </div>
         )}

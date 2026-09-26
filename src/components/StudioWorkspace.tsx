@@ -29,7 +29,7 @@ import {
   playAudioBuffer,
   stopCurrentPlayback
 } from '../utils/audioEngine';
-import { saveSoundToDB } from '../utils/storage';
+import { saveSoundToLibrary } from '../utils/audioStorage';
 
 interface StudioWorkspaceProps {
   onSoundSaved: (sound: SoundItem) => void;
@@ -81,6 +81,8 @@ export const StudioWorkspace: React.FC<StudioWorkspaceProps> = ({
   // Multi-cut session history
   const [sessionCuts, setSessionCuts] = useState<SoundItem[]>([]);
   const [lastSavedSound, setLastSavedSound] = useState<SoundItem | null>(null);
+  const [saveError, setSaveError] = useState<string | null>(null);
+  const [isSaving, setIsSaving] = useState(false);
 
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const coverImageInputRef = useRef<HTMLInputElement | null>(null);
@@ -194,7 +196,7 @@ export const StudioWorkspace: React.FC<StudioWorkspaceProps> = ({
 
   // Perform Slice & Save (Continuous Workflow)
   const handleSaveCut = async (shouldDownload = false) => {
-    if (!loadedBuffer) return;
+    if (!loadedBuffer || isSaving) return;
 
     const ctx = getAudioContext();
     if (ctx.state === 'suspended') {
@@ -238,7 +240,16 @@ export const StudioWorkspace: React.FC<StudioWorkspaceProps> = ({
       audioBlob: wavBlob,
     };
 
-    await saveSoundToDB(soundRecord, wavBlob, slicedBuffer);
+    setSaveError(null);
+    setIsSaving(true);
+    try {
+      await saveSoundToLibrary(soundRecord, wavBlob, slicedBuffer);
+    } catch (error) {
+      setSaveError(error instanceof Error ? error.message : 'No se pudo guardar el audio');
+      return;
+    } finally {
+      setIsSaving(false);
+    }
     onSoundSaved(soundRecord);
 
     setSessionCuts((prev) => [soundRecord, ...prev]);
@@ -638,6 +649,7 @@ export const StudioWorkspace: React.FC<StudioWorkspaceProps> = ({
               <div className="space-y-2 pt-4 border-t border-white/6">
                 <button
                   onClick={() => handleSaveCut(false)}
+                  disabled={isSaving}
                   className="w-full py-3 rounded-2xl bg-gradient-to-r from-indigo-600 via-indigo-500 to-purple-600 hover:from-indigo-500 hover:to-purple-500 text-white text-xs font-semibold shadow-lg shadow-indigo-600/30 transition-all flex items-center justify-center gap-2 active:scale-[0.98]"
                 >
                   <Scissors className="w-4 h-4" />
@@ -646,11 +658,13 @@ export const StudioWorkspace: React.FC<StudioWorkspaceProps> = ({
 
                 <button
                   onClick={() => handleSaveCut(true)}
+                  disabled={isSaving}
                   className="w-full py-2.5 rounded-2xl bg-white/6 hover:bg-white/12 border border-white/10 text-neutral-300 hover:text-white text-xs font-medium transition-all flex items-center justify-center gap-2"
                 >
                   <Download className="w-4 h-4" />
                   <span>Guardar y Descargar .WAV</span>
                 </button>
+                {saveError && <p role="alert" className="text-xs text-rose-300">{saveError}</p>}
               </div>
             </div>
           </div>
@@ -664,7 +678,7 @@ export const StudioWorkspace: React.FC<StudioWorkspaceProps> = ({
                   Cortes Extraídos en esta Sesión ({sessionCuts.length})
                 </h3>
                 <span className="text-[11px] font-mono text-emerald-400">
-                  ✓ Listos en IndexedDB & Portapapeles
+                  ✓ Listos en la carpeta local
                 </span>
               </div>
 

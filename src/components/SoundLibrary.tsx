@@ -192,7 +192,7 @@ export const SoundLibrary: React.FC<SoundLibraryProps> = ({
                     onClick={() => (isPlaying ? onStopSound() : onPlaySound(sound))}
                     className="relative w-14 h-14 rounded-xl bg-neutral-900 border border-white/10 overflow-hidden shrink-0 cursor-pointer group-hover:scale-105 transition-transform flex items-center justify-center text-2xl shadow-inner"
                   >
-                    {sound.coverImage && sound.coverImage.startsWith('/') ? (
+                    {sound.coverImage && (sound.coverImage.startsWith('/') || sound.coverImage.startsWith('data:image/')) ? (
                       <img
                         src={sound.coverImage}
                         alt={sound.title}
@@ -318,7 +318,7 @@ export const SoundLibrary: React.FC<SoundLibraryProps> = ({
                     <button
                       onClick={() => onDeleteSound(sound.id)}
                       className="p-1.5 rounded-lg hover:text-rose-400 hover:bg-rose-500/10 transition-colors"
-                      title="Eliminar sonido"
+                      title="Eliminar sonido y su archivo local"
                     >
                       <Trash2 className="w-3.5 h-3.5" />
                     </button>
@@ -358,7 +358,7 @@ export const SoundLibrary: React.FC<SoundLibraryProps> = ({
                   </button>
 
                   <div className="w-8 h-8 rounded-lg bg-neutral-900 border border-white/10 overflow-hidden shrink-0 flex items-center justify-center text-sm">
-                    {sound.coverImage && sound.coverImage.startsWith('/') ? (
+                    {sound.coverImage && (sound.coverImage.startsWith('/') || sound.coverImage.startsWith('data:image/')) ? (
                       <img src={sound.coverImage} alt="" className="w-full h-full object-cover" />
                     ) : (
                       <span>{sound.coverImage || '🔊'}</span>
@@ -409,6 +409,7 @@ export const SoundLibrary: React.FC<SoundLibraryProps> = ({
                   <button
                     onClick={() => onDeleteSound(sound.id)}
                     className="p-1.5 rounded-lg text-neutral-400 hover:text-rose-400"
+                    title="Eliminar sonido y su archivo local"
                   >
                     <Trash2 className="w-3.5 h-3.5" />
                   </button>

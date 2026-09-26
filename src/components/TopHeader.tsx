@@ -1,5 +1,5 @@
 import React from 'react';
-import { Search, Plus, Sparkles } from 'lucide-react';
+import { Search, Plus, Sparkles, Download } from 'lucide-react';
 import { ActiveTab } from './Sidebar';
 
 interface TopHeaderProps {
@@ -9,6 +9,9 @@ interface TopHeaderProps {
   onOpenTrimmer: () => void;
   onOpenPrompt: () => void;
   totalSoundsCount: number;
+  onExportLibrary: () => void;
+  isExporting: boolean;
+  exportStatus: string;
 }
 
 export const TopHeader: React.FC<TopHeaderProps> = ({
@@ -18,6 +21,9 @@ export const TopHeader: React.FC<TopHeaderProps> = ({
   onOpenTrimmer,
   onOpenPrompt,
   totalSoundsCount,
+  onExportLibrary,
+  isExporting,
+  exportStatus,
 }) => {
   const getTabBreadcrumb = () => {
     switch (activeTab) {
@@ -73,6 +79,18 @@ export const TopHeader: React.FC<TopHeaderProps> = ({
 
       {/* Zone 3: Primary Actions */}
       <div className="flex items-center gap-2.5 shrink-0">
+        {activeTab === 'library' && (
+          <button
+            onClick={onExportLibrary}
+            disabled={isExporting}
+            className="h-9 px-3 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 text-xs font-medium text-neutral-300 hover:text-white flex items-center gap-2 transition-all disabled:opacity-50"
+            title="Descargar los audios guardados en este navegador y su catálogo en un ZIP"
+            aria-label="Exportar biblioteca"
+          >
+            <Download className="w-3.5 h-3.5" />
+            <span className="hidden lg:inline">{isExporting ? 'Exportando...' : 'Exportar biblioteca'}</span>
+          </button>
+        )}
         <button
           onClick={onOpenPrompt}
           className="h-9 px-3 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 text-xs font-medium text-neutral-300 hover:text-white flex items-center gap-2 transition-all"
@@ -90,6 +108,7 @@ export const TopHeader: React.FC<TopHeaderProps> = ({
           <span>Subir & Recortar</span>
         </button>
       </div>
+      {exportStatus && <div role="status" className="absolute top-16 right-6 z-30 rounded-xl border border-white/10 bg-[#181a27] px-4 py-2 text-xs text-white shadow-lg">{exportStatus}</div>}
     </header>
   );
 };

@@ -14,7 +14,7 @@ import {
   RefreshCw
 } from 'lucide-react';
 import { SoundItem } from '../types';
-import { getSoundBlob } from '../utils/storage';
+import { getSoundBlob } from '../utils/audioStorage';
 
 interface OpenFileModalProps {
   isOpen: boolean;
@@ -226,7 +226,7 @@ export const OpenFileModal: React.FC<OpenFileModalProps> = ({
         {/* Selected Sound Card */}
         <div className="flex items-center gap-3 p-3 rounded-2xl bg-white/4 border border-white/8">
           <div className="w-12 h-12 rounded-xl bg-neutral-900 border border-white/10 overflow-hidden flex items-center justify-center text-xl shrink-0">
-            {sound.coverImage && sound.coverImage.startsWith('/') ? (
+            {sound.coverImage && (sound.coverImage.startsWith('/') || sound.coverImage.startsWith('data:image/')) ? (
               <img
                 src={sound.coverImage}
                 alt={sound.title}

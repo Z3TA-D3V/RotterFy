@@ -24,12 +24,12 @@ Soy creador de contenido en redes sociales (TikTok, Reels, YouTube Shorts) y pro
 ### 2. REQUISITOS TÉCNICOS Y ARQUITECTURA
 - **Framework sugerido**: Angular 18/19 con Standalone Components, Signals (\`signal\`, \`computed\`, \`effect\`), \`inject()\` dependency injection, RxJS para eventos de audio y TailwindCSS (o React 19 + TypeScript + Vite + TailwindCSS).
 - **Procesamiento de Audio 100% en Cliente (Web Audio API)**:
-  - \`AudioContext\` y \`OfflineAudioContext\` para síntesis nativa de sonidos iniciales sin depender de servidores o URLs externas (Vine Boom, Metal Pipe, Bruh, Taco Bell, Roblox Oof, Airhorn, etc.).
+  - API Web Audio para reproducir y procesar los archivos WAV del catálogo local.
   - Decodificación con \`decodeAudioData\` de archivos MP3, WAV, OGG, M4A, WebM.
   - Slicer no destructivo: extracción de muestras PCM en un nuevo \`AudioBuffer\`, cálculo de picos y curvas de fundido (Fade In/Out).
   - Encoder WAV RIFF de 16 bits nativo en JavaScript puro para exportar Blobs instantáneos.
 - **Persistencia Local Robusta**:
-  - IndexedDB nativo (sin dependencias pesadas) para almacenar tanto los metadatos como los Blobs de audio reales y las imágenes de portada. Nada se pierde al recargar.
+  - Servidor local para guardar los WAV como archivos en public/assets/audio y actualizar manifest.json al crear o borrar sonidos.
 - **Diseño Visual & Principios Estéticos**:
   - Paleta oscura sofisticada (\`#0c0d12\`, zinc/slate neutro) con acentos sutiles.
   - Paneles de vidrio esmerilado con \`backdrop-filter: blur(20px)\` y bordes sutiles \`border-white/10\`.

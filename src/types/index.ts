@@ -16,7 +16,7 @@ export interface SoundItem {
   hotkey?: string;
   originalFileName?: string;
   folder?: string;
-  sourceType: 'preset' | 'user-upload' | 'trimmed-clip';
+  sourceType: 'preset' | 'user-upload' | 'trimmed-clip' | 'published';
 }
 
 export interface FolderCategory {

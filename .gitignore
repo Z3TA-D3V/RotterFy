@@ -1,4 +1,5 @@
 node_modules/
+/api/
 build/
 dist/
 coverage/
@@ -7,4 +8,3 @@ coverage/
 .env*
 !.env.example
 *.zip
-

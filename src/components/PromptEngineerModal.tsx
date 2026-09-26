@@ -38,7 +38,7 @@ export class AudioEngineService {
   bufferToWavBlob(buffer: AudioBuffer): Blob { ... }
 }
 
-// 2. SoundStorageService (IndexedDB con Signals)
+// 2. SoundStorageService (archivos WAV con servidor local y Signals)
 @Injectable({ providedIn: 'root' })
 export class SoundStorageService {
   sounds = signal<SoundItem[]>([]);

@@ -17,19 +17,21 @@ import { PromptEngineerModal } from './components/PromptEngineerModal';
 import { AudioPlayerBar } from './components/AudioPlayerBar';
 import { SoundItem, ScriptBeat, StockVideoAsset } from './types';
 import { 
-  initAndSeedDatabase, 
-  getAllSounds, 
+  initSoundLibrary,
   getSoundAudioBuffer, 
   getSoundBlob,
-  deleteSoundFromDB, 
+  deleteSoundFromLibrary,
   updateSoundMetadata,
   incrementPlayCount,
+} from './utils/audioStorage';
+import {
   getScripts,
   saveScript,
   deleteScript,
   getStockVideos,
   saveStockVideo
 } from './utils/storage';
+import { exportLocalLibrary } from './utils/libraryExport';
 import { playAudioBuffer, stopCurrentPlayback } from './utils/audioEngine';
 
 export default function App() {
@@ -43,6 +45,8 @@ export default function App() {
   const [scripts, setScripts] = useState<ScriptBeat[]>([]);
   const [stockVideos, setStockVideos] = useState<StockVideoAsset[]>([]);
   const [isLoaded, setIsLoaded] = useState(false);
+  const [isExporting, setIsExporting] = useState(false);
+  const [exportStatus, setExportStatus] = useState('');
 
   // Modals
   const [isTrimmerOpen, setIsTrimmerOpen] = useState(false);
@@ -68,14 +72,16 @@ export default function App() {
   const animFrameRef = useRef<number | null>(null);
   const playStartTimeRef = useRef<number>(0);
 
-  // Initial load: Seed IndexedDB with initial brainrot audio presets
+  // Load the sound catalog from the local server.
   useEffect(() => {
     let isMounted = true;
     async function loadData() {
       try {
-        const loadedSounds = await initAndSeedDatabase();
-        const loadedScripts = await getScripts();
-        const loadedStocks = await getStockVideos();
+        const loadedSounds = await initSoundLibrary();
+        const [loadedScripts, loadedStocks] = await Promise.all([
+          getScripts().catch(() => []),
+          getStockVideos().catch(() => []),
+        ]);
         if (isMounted) {
           setSounds(loadedSounds);
           setScripts(loadedScripts);
@@ -197,11 +203,15 @@ export default function App() {
 
   // Delete sound
   const handleDeleteSound = async (id: string) => {
-    if (currentPlayingSound?.id === id) {
-      stopAudio();
+    const sound = sounds.find((item) => item.id === id);
+    if (!window.confirm(`¿Eliminar "${sound?.title || 'este sonido'}" y su archivo WAV local?`)) return;
+    try {
+      await deleteSoundFromLibrary(id);
+      if (currentPlayingSound?.id === id) stopAudio();
+      setSounds((prev) => prev.filter((s) => s.id !== id));
+    } catch (error) {
+      setExportStatus(error instanceof Error ? error.message : 'No se pudo borrar el audio');
     }
-    await deleteSoundFromDB(id);
-    setSounds((prev) => prev.filter((s) => s.id !== id));
   };
 
   // Open Trimmer for existing sound
@@ -227,6 +237,19 @@ export default function App() {
   // Callback when a new sound is saved in trimmer
   const handleSoundSaved = (newSound: SoundItem) => {
     setSounds((prev) => [newSound, ...prev.filter((s) => s.id !== newSound.id)]);
+  };
+
+  const handleExportLibrary = async () => {
+    setIsExporting(true);
+    setExportStatus('');
+    try {
+      const count = await exportLocalLibrary();
+      setExportStatus(`ZIP descargado con ${count} audios locales`);
+    } catch (error) {
+      setExportStatus(error instanceof Error ? error.message : 'No se pudo exportar la biblioteca');
+    } finally {
+      setIsExporting(false);
+    }
   };
 
   // Open "Abrir en Carpeta" modal
@@ -263,6 +286,9 @@ export default function App() {
           onOpenTrimmer={handleOpenTrimmerNew}
           onOpenPrompt={() => setIsPromptModalOpen(true)}
           totalSoundsCount={sounds.length}
+          onExportLibrary={handleExportLibrary}
+          isExporting={isExporting}
+          exportStatus={exportStatus}
         />
 
         {/* Scrollable Workspace Body */}

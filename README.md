@@ -1,33 +1,48 @@
-# RotVault - Brainrot Sound Studio & Creator Command Center
+# RotVault
 
-Aplicación de gestión de recursos virales, banco de efectos brainrot y estudio de recorte en alta definición de audio para TikTok, Reels y Shorts.
+Biblioteca local de sonidos y estudio de recorte para crear clips WAV.
 
-## 🚀 Cómo arrancar el proyecto en tu máquina local
+El frontend y la API son proyectos separados. La carpeta [api](api/) tiene su
+propio `package.json` y se puede mover a otro repositorio.
+El repositorio del frontend ignora `api/` para que puedas versionarla aparte.
 
-1. Abre una terminal dentro de esta carpeta en VS Code:
-   ```bash
-   code .
-   ```
+## Iniciar en el ordenador
 
-2. Instala las dependencias:
-   ```bash
-   npm install
-   ```
-
-3. Ejecuta el servidor de desarrollo:
-   ```bash
-   npm run dev
-   ```
-
-4. Abre en tu navegador la URL que indica la terminal (usualmente http://localhost:5173 o http://localhost:3000).
-
-## 📦 Subir a tu repositorio de GitHub
+Abre dos terminales:
 
 ```bash
-git init
-git add .
-git commit -m "feat: RotVault inicial"
-git branch -M main
-git remote add origin https://github.com/TU_USUARIO/TU_REPOSITORIO.git
-git push -u origin main
+cd api
+npm install
+npm run dev
 ```
+
+```bash
+npm install
+npm run dev
+```
+
+Abre `http://127.0.0.1:3000`. La API escucha en `127.0.0.1:3001`.
+
+## Dónde se guardan los audios
+
+Los 33 sonidos existentes y los recortes nuevos están en
+`public/assets/audio/`. El archivo `manifest.json` guarda sus títulos,
+categorías y demás datos. La API escribe y borra tanto los WAV como sus entradas
+del catálogo. Para cambiar la ubicación cuando muevas la API a otro repositorio,
+configura `AUDIO_DIR` según [api/README.md](api/README.md).
+
+**Exportar biblioteca** descarga un ZIP de copia de seguridad. Los guiones y la
+lista de vídeos de stock aún usan IndexedDB; los audios no dependen de él.
+
+## Versión compilada en local
+
+Con la API en marcha, ejecuta en el frontend:
+
+```bash
+npm run build
+npm start
+```
+
+Una publicación estática puede consultar los sonidos incluidos en el build.
+Guardar o borrar desde otro ordenador requeriría publicar también la API con
+autenticación y un almacenamiento accesible para ella.

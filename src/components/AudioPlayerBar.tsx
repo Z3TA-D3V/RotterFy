@@ -53,7 +53,7 @@ export const AudioPlayerBar: React.FC<AudioPlayerBarProps> = ({
         {/* Left: Sound Cover & Metadata */}
         <div className="flex items-center gap-3 min-w-0 w-full md:w-auto">
           <div className="w-11 h-11 rounded-xl bg-neutral-900 border border-white/10 overflow-hidden shrink-0 flex items-center justify-center text-lg">
-            {sound.coverImage && sound.coverImage.startsWith('/') ? (
+            {sound.coverImage && (sound.coverImage.startsWith('/') || sound.coverImage.startsWith('data:image/')) ? (
               <img src={sound.coverImage} alt="" className="w-full h-full object-cover" />
             ) : (
               <span>{sound.coverImage || '🔊'}</span>
