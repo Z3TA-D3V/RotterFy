@@ -45,6 +45,8 @@ export async function getAllSounds(): Promise<SoundItem[]> {
     manifest = await response.json();
   }
   audioFiles.clear();
+  audioBlobs.clear();
+  audioBuffers.clear();
   return manifest.map(({ file, ...sound }) => {
     audioFiles.set(sound.id, useApiAudio
       ? `${apiBase}/audio/${encodeURIComponent(file)}`

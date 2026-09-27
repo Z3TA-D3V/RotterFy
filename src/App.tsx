@@ -89,6 +89,7 @@ export default function App() {
   const [volume, setVolume] = useState(1.0);
 
   const playbackControllerRef = useRef<{ stop: () => void } | null>(null);
+  const playbackRequestRef = useRef(0);
   const animFrameRef = useRef<number | null>(null);
   const playStartTimeRef = useRef<number>(0);
 
@@ -115,6 +116,7 @@ export default function App() {
 
   // Stop playback safely
   const stopAudio = useCallback(() => {
+    playbackRequestRef.current += 1;
     if (playbackControllerRef.current) {
       playbackControllerRef.current.stop();
       playbackControllerRef.current = null;
@@ -131,12 +133,21 @@ export default function App() {
 
   // Play a sound from library or soundboard
   const playSound = useCallback(
-    async (sound: SoundItem) => {
+    async (sound: SoundItem, speed = playbackSpeed) => {
       stopAudio();
-
-      const buffer = await getSoundAudioBuffer(sound.id);
+      const request = playbackRequestRef.current;
+      let buffer: AudioBuffer | null;
+      try {
+        buffer = await getSoundAudioBuffer(sound.id);
+      } catch (error) {
+        if (request === playbackRequestRef.current) {
+          setExportStatus(error instanceof Error ? error.message : 'No se pudo cargar el audio');
+        }
+        return;
+      }
+      if (request !== playbackRequestRef.current) return;
       if (!buffer) {
-        console.error('Could not load AudioBuffer for', sound.id);
+        setExportStatus(`No se pudo cargar el audio: ${sound.title}`);
         return;
       }
 
@@ -146,14 +157,14 @@ export default function App() {
       playStartTimeRef.current = performance.now();
 
       // Increment play count asynchronously
-      incrementPlayCount(sound.id).then((newCount) => {
+      void incrementPlayCount(sound.id).then((newCount) => {
         setSounds((prev) =>
           prev.map((s) => (s.id === sound.id ? { ...s, playCount: newCount } : s))
         );
-      });
+      }).catch((error) => console.error('No se pudo actualizar el contador:', error));
 
       const controller = playAudioBuffer(buffer, {
-        playbackRate: playbackSpeed,
+        playbackRate: speed,
         volume,
         loop: isLooping,
         onEnded: () => {
@@ -171,7 +182,7 @@ export default function App() {
       // Animate progress
       const updateProg = () => {
         const elapsed =
-          ((performance.now() - playStartTimeRef.current) / 1000) * playbackSpeed;
+          ((performance.now() - playStartTimeRef.current) / 1000) * speed;
         const totalDur = buffer.duration;
 
         if (isLooping) {
@@ -200,19 +211,20 @@ export default function App() {
   const handleSpeedChange = (speed: number) => {
     setPlaybackSpeed(speed);
     if (isPlaying && currentPlayingSound) {
-      playSound(currentPlayingSound);
+      void playSound(currentPlayingSound, speed);
     }
   };
 
   // Toggle favorite
   const handleToggleFavorite = async (id: string) => {
-    const updated = sounds.map((s) =>
-      s.id === id ? { ...s, favorite: !s.favorite } : s
-    );
-    setSounds(updated);
-    const target = updated.find((s) => s.id === id);
-    if (target) {
+    const current = sounds.find((s) => s.id === id);
+    if (!current) return;
+    const target = { ...current, favorite: !current.favorite };
+    try {
       await updateSoundMetadata(target);
+      setSounds((prev) => prev.map((s) => s.id === id ? target : s));
+    } catch (error) {
+      setExportStatus(error instanceof Error ? error.message : 'No se pudo actualizar el favorito');
     }
   };
 

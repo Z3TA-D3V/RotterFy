@@ -428,9 +428,11 @@ export async function synthesizeBrainrotSound(
     // Stutter modulation
     const lfo = offlineCtx.createOscillator();
     const lfoGain = offlineCtx.createGain();
+    const stutterGain = offlineCtx.createGain();
     lfo.type = 'square';
     lfo.frequency.setValueAtTime(16, 0);
     lfoGain.gain.setValueAtTime(0.5, 0);
+    stutterGain.gain.setValueAtTime(0.5, 0);
 
     const filter = offlineCtx.createBiquadFilter();
     filter.type = 'lowpass';
@@ -440,11 +442,16 @@ export async function synthesizeBrainrotSound(
     gain.gain.setValueAtTime(0.8, 0);
     gain.gain.exponentialRampToValueAtTime(0.001, duration);
 
+    lfo.connect(lfoGain);
+    lfoGain.connect(stutterGain.gain);
     osc.connect(filter);
-    filter.connect(gain);
+    filter.connect(stutterGain);
+    stutterGain.connect(gain);
     gain.connect(offlineCtx.destination);
     osc.start(0);
     osc.stop(duration);
+    lfo.start(0);
+    lfo.stop(duration);
   } else if (type === 'doge-huh') {
     // Rising inquisitive cartoon pitch "Huh?"
     const osc = offlineCtx.createOscillator();
@@ -478,7 +485,8 @@ export async function synthesizeBrainrotSound(
     modGain.gain.setValueAtTime(80, 0);
     modGain.gain.exponentialRampToValueAtTime(5, duration);
 
-    modulator.connect(carrier.frequency);
+    modulator.connect(modGain);
+    modGain.connect(carrier.frequency);
 
     const gain = offlineCtx.createGain();
     gain.gain.setValueAtTime(0, 0);
@@ -505,7 +513,8 @@ export async function synthesizeBrainrotSound(
 
       vibrato.frequency.setValueAtTime(5.5, idx * 0.75);
       vibGain.gain.setValueAtTime(8, idx * 0.75);
-      vibrato.connect(osc.frequency);
+      vibrato.connect(vibGain);
+      vibGain.connect(osc.frequency);
 
       const filter = offlineCtx.createBiquadFilter();
       filter.type = 'lowpass';

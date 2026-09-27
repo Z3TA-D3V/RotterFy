@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { assetUrl, deleteScript, getScripts, getStockVideos, saveScript, saveStockVideo } from '../../src/utils/storage';
+import { assetUrl, deleteScript, getScripts, getStockVideos, saveScript, saveStockVideo, uploadStockVideoFile } from '../../src/utils/storage';
 import { script, stockVideo } from '../fixtures';
 
 describe('storage API', () => {
@@ -33,5 +33,41 @@ describe('storage API', () => {
     expect(await saveStockVideo(stockVideo, file)).toEqual(uploaded);
     expect(fetchMock.mock.calls[1][1]).toMatchObject({ method: 'PUT', body: file });
     expect(assetUrl(uploaded.localPath)).toBe('http://127.0.0.1:3001/api/videos/stock-100.mp4');
+  });
+  it('elimina la ficha si falla la subida del archivo y conserva el error original', async () => {
+    const file = new File(['video'], 'clip.webm', { type: 'video/webm' });
+    fetchMock.mockResolvedValueOnce(Response.json(stockVideo))
+      .mockResolvedValueOnce(Response.json({ error: 'Disco lleno' }, { status: 507 }))
+      .mockResolvedValueOnce(new Response(null, { status: 204 }));
+
+    await expect(saveStockVideo(stockVideo, file)).rejects.toThrow('Disco lleno');
+    expect(fetchMock.mock.calls[2][0]).toContain(`/stock-videos/${stockVideo.id}`);
+    expect(fetchMock.mock.calls[2][1].method).toBe('DELETE');
+  });
+
+  it('conserva el error de subida aunque falle la limpieza de la ficha', async () => {
+    const file = new File(['video'], 'clip.mp4', { type: 'video/mp4' });
+    fetchMock.mockResolvedValueOnce(Response.json(stockVideo))
+      .mockResolvedValueOnce(new Response('fallo', { status: 500 }))
+      .mockRejectedValueOnce(new Error('sin conexión'));
+    await expect(saveStockVideo(stockVideo, file)).rejects.toThrow('Error del servidor (500)');
+  });
+
+  it('evita la subida cuando solo se guarda una ficha y deduce MIME por extensión si falta', async () => {
+    fetchMock.mockResolvedValueOnce(Response.json(stockVideo));
+    expect(await saveStockVideo(stockVideo)).toEqual(stockVideo);
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+
+    fetchMock.mockResolvedValueOnce(Response.json(stockVideo));
+    const file = new File(['video'], 'clip.MOV');
+    await uploadStockVideoFile('id/1', file);
+    expect(fetchMock.mock.calls[1][0]).toContain('/stock-videos/id%2F1/file');
+    expect(fetchMock.mock.calls[1][1].headers['Content-Type']).toBe('video/quicktime');
+  });
+
+  it('transforma rutas de imágenes y deja intactas las URL externas', () => {
+    expect(assetUrl('/assets/images/portada con espacio.png')).toBe('http://127.0.0.1:3001/api/images/portada%20con%20espacio.png');
+    expect(assetUrl('https://example.com/video.mp4')).toBe('https://example.com/video.mp4');
+    expect(assetUrl()).toBeUndefined();
   });
 });

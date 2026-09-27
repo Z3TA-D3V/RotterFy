@@ -340,6 +340,7 @@ export const SoundLibrary: React.FC<SoundLibraryProps> = ({
                 <div className="flex items-center gap-3 min-w-0 flex-1">
                   <button
                     onClick={() => (isPlaying ? onStopSound() : onPlaySound(sound))}
+                    aria-label={isPlaying ? `Detener ${sound.title}` : `Reproducir ${sound.title}`}
                     className={`w-9 h-9 rounded-xl flex items-center justify-center shrink-0 transition-colors ${
                       isPlaying
                         ? 'bg-amber-500 text-black'

@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { deleteSoundFromLibrary, getAllSounds, getSoundBlob, incrementPlayCount,
+import { deleteSoundFromLibrary, getAllSounds, getSoundAudioBuffer, getSoundBlob, incrementPlayCount,
   saveSoundToLibrary, updateSoundMetadata } from '../../src/utils/audioStorage';
 import { sound } from '../fixtures';
 
@@ -49,5 +49,72 @@ describe('audioStorage', () => {
     expect(sounds[0].id).toBe('static-1');
     expect(sounds[0].coverImage).toBe(sound.coverImage);
     expect(fetchMock.mock.calls[1][0]).toContain('assets/audio/manifest.json');
+  });
+  it('no inventa audio para un ID ausente y no vuelve a descargar un blob ya cargado', async () => {
+    fetchMock.mockResolvedValueOnce(Response.json([{ ...sound, id: 'cached', file: 'cached.wav' }]))
+      .mockResolvedValueOnce(new Response(new Blob(['RIFF'], { type: 'audio/wav' })));
+    await getAllSounds();
+    expect(await getSoundBlob('missing')).toBeNull();
+    const first = await getSoundBlob('cached');
+    expect(await getSoundBlob('cached')).toBe(first);
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+  });
+
+  it('propaga errores de descarga y no guarda una respuesta incompleta en caché', async () => {
+    fetchMock.mockResolvedValueOnce(Response.json([{ ...sound, id: 'retry', file: 'retry.wav' }]))
+      .mockResolvedValueOnce(new Response(null, { status: 503 }))
+      .mockResolvedValueOnce(new Response(new Blob(['RIFF'], { type: 'audio/wav' })));
+    await getAllSounds();
+    await expect(getSoundBlob('retry')).rejects.toThrow('No se pudo cargar el audio (503)');
+    expect(await getSoundBlob('retry')).toBeInstanceOf(Blob);
+    expect(fetchMock).toHaveBeenCalledTimes(3);
+  });
+
+  it('informa del fallo si tampoco se puede cargar el catálogo estático', async () => {
+    fetchMock.mockRejectedValueOnce(new Error('API offline'))
+      .mockResolvedValueOnce(new Response(null, { status: 404 }));
+    await expect(getAllSounds()).rejects.toThrow('No se pudo cargar el catálogo de audio');
+  });
+
+  it('no pierde la caché de un sonido si la API rechaza su borrado', async () => {
+    const id = 'pending-delete';
+    const item = { ...sound, id };
+    fetchMock.mockResolvedValueOnce(Response.json({ ...item, file: `${id}.wav` }))
+      .mockResolvedValueOnce(Response.json({ error: 'No autorizado' }, { status: 403 }));
+    const blob = new Blob(['RIFF'], { type: 'audio/wav' });
+    await saveSoundToLibrary(item, blob);
+    await expect(deleteSoundFromLibrary(id)).rejects.toThrow('No autorizado');
+    expect(await getSoundBlob(id)).toBe(blob);
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+  });
+
+  it('devuelve null para el buffer si el sonido no está en el catálogo', async () => {
+    expect(await getSoundAudioBuffer('id-inexistente')).toBeNull();
+  });
+
+  it('invalida audio descargado si una recarga elimina el sonido del catálogo', async () => {
+    fetchMock.mockResolvedValueOnce(Response.json([{ ...sound, id: 'removed', file: 'removed.wav' }]))
+      .mockResolvedValueOnce(new Response(new Blob(['RIFF'], { type: 'audio/wav' })))
+      .mockResolvedValueOnce(Response.json([]));
+    await getAllSounds();
+    expect(await getSoundBlob('removed')).toBeInstanceOf(Blob);
+    await getAllSounds();
+    expect(await getSoundBlob('removed')).toBeNull();
+  });
+
+  it('decodifica una sola vez el audio descargado y reutiliza el buffer', async () => {
+    const decoded = { duration: 2 } as AudioBuffer;
+    const decodeAudioData = vi.fn(async () => decoded);
+    vi.stubGlobal('AudioContext', class {
+      state = 'running';
+      decodeAudioData = decodeAudioData;
+    });
+    fetchMock.mockResolvedValueOnce(Response.json([{ ...sound, id: 'decode-once', file: 'decode-once.wav' }]))
+      .mockResolvedValueOnce(new Response(new Blob(['RIFF'], { type: 'audio/wav' })));
+    await getAllSounds();
+    expect(await getSoundAudioBuffer('decode-once')).toBe(decoded);
+    expect(await getSoundAudioBuffer('decode-once')).toBe(decoded);
+    expect(decodeAudioData).toHaveBeenCalledTimes(1);
+    expect(fetchMock).toHaveBeenCalledTimes(2);
   });
 });
