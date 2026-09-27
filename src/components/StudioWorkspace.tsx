@@ -30,6 +30,7 @@ import {
   stopCurrentPlayback
 } from '../utils/audioEngine';
 import { saveSoundToLibrary } from '../utils/audioStorage';
+import { CoverCropper } from './CoverCropper';
 
 interface StudioWorkspaceProps {
   onSoundSaved: (sound: SoundItem) => void;
@@ -77,6 +78,8 @@ export const StudioWorkspace: React.FC<StudioWorkspaceProps> = ({
   const [folder, setFolder] = useState<string>('Recortes');
   const [hotkey, setHotkey] = useState<string>('1');
   const [coverImage, setCoverImage] = useState<string>('/assets/images/sigma_gigachad.jpg');
+  const [coverFileToCrop, setCoverFileToCrop] = useState<File | null>(null);
+  const [customCoverBlob, setCustomCoverBlob] = useState<Blob | null>(null);
 
   // Multi-cut session history
   const [sessionCuts, setSessionCuts] = useState<SoundItem[]>([]);
@@ -97,6 +100,7 @@ export const StudioWorkspace: React.FC<StudioWorkspaceProps> = ({
       if (initialSound) {
         setTitle(`${initialSound.title} (Corte)`);
         setCategory(initialSound.category);
+        setCustomCoverBlob(null);
         setCoverImage(initialSound.coverImage || PRESET_COVERS[0].url || '');
         setFolder(initialSound.folder || 'Recortes');
       }
@@ -183,15 +187,8 @@ export const StudioWorkspace: React.FC<StudioWorkspaceProps> = ({
 
   const handleCoverUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
-    if (file) {
-      const reader = new FileReader();
-      reader.onload = () => {
-        if (typeof reader.result === 'string') {
-          setCoverImage(reader.result);
-        }
-      };
-      reader.readAsDataURL(file);
-    }
+    if (file) setCoverFileToCrop(file);
+    e.target.value = '';
   };
 
   // Perform Slice & Save (Continuous Workflow)
@@ -243,7 +240,7 @@ export const StudioWorkspace: React.FC<StudioWorkspaceProps> = ({
     setSaveError(null);
     setIsSaving(true);
     try {
-      await saveSoundToLibrary(soundRecord, wavBlob, slicedBuffer);
+      await saveSoundToLibrary(soundRecord, wavBlob, slicedBuffer, customCoverBlob);
     } catch (error) {
       setSaveError(error instanceof Error ? error.message : 'No se pudo guardar el audio');
       return;
@@ -301,6 +298,12 @@ export const StudioWorkspace: React.FC<StudioWorkspaceProps> = ({
 
   return (
     <div className="space-y-6">
+      {coverFileToCrop && <CoverCropper file={coverFileToCrop} onCancel={() => setCoverFileToCrop(null)} onApply={(blob, previewUrl) => {
+        if (coverImage.startsWith('blob:')) URL.revokeObjectURL(coverImage);
+        setCustomCoverBlob(blob);
+        setCoverImage(previewUrl);
+        setCoverFileToCrop(null);
+      }} />}
       {/* Studio Header Banner */}
       <div className="flex flex-wrap items-center justify-between gap-4 p-5 rounded-3xl bg-white/4 border border-white/8 backdrop-blur-xl">
         <div className="flex items-center gap-3.5">
@@ -534,7 +537,7 @@ export const StudioWorkspace: React.FC<StudioWorkspaceProps> = ({
                       <button
                         key={preset.id}
                         type="button"
-                        onClick={() => setCoverImage(preset.url || preset.emoji || '')}
+                        onClick={() => { if (coverImage.startsWith('blob:')) URL.revokeObjectURL(coverImage); setCoverImage(preset.url || preset.emoji || ''); setCustomCoverBlob(null); }}
                         className={`h-11 rounded-xl border flex items-center justify-center gap-1.5 text-xs transition-all overflow-hidden p-1 ${
                           isSelected
                             ? 'border-indigo-500 bg-indigo-500/20 text-white ring-2 ring-indigo-500/30'

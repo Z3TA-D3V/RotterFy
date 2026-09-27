@@ -19,7 +19,7 @@ export default defineConfig(() => {
       // The local API writes the catalog on every play. Watching these files
       // can reload the page and interrupt the sound that was just started.
       watch: process.env.DISABLE_HMR === 'true' ? null : {
-        ignored: ['**/public/assets/audio/**'],
+        ignored: ['**/public/assets/audio/**', '**/public/assets/data/**', '**/public/assets/images/**', '**/public/assets/videos/**'],
       },
     },
   };

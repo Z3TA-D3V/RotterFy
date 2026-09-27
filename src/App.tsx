@@ -25,14 +25,36 @@ import {
   incrementPlayCount,
 } from './utils/audioStorage';
 import {
-  getScripts,
   saveScript,
   deleteScript,
-  getStockVideos,
-  saveStockVideo
+  saveStockVideo,
+  deleteStockVideo,
+  uploadStockVideoFile,
 } from './utils/storage';
+import { loadCreatorLists } from './utils/legacyMigration';
 import { exportLocalLibrary } from './utils/libraryExport';
 import { playAudioBuffer, stopCurrentPlayback } from './utils/audioEngine';
+
+let initialDataPromise: Promise<{ sounds: SoundItem[]; scripts: ScriptBeat[]; videos: StockVideoAsset[] }> | null = null;
+
+function loadInitialData() {
+  if (!initialDataPromise) {
+    const pending = Promise.all([
+      initSoundLibrary(),
+      loadCreatorLists().catch((error) => {
+        console.error('No se pudieron cargar los guiones y vídeos:', error);
+        return { scripts: [] as ScriptBeat[], videos: [] as StockVideoAsset[] };
+      }),
+    ])
+      .then(([sounds, { scripts, videos }]) => ({ sounds, scripts, videos }));
+    initialDataPromise = pending;
+    void pending.then(
+      () => { if (initialDataPromise === pending) initialDataPromise = null; },
+      () => { if (initialDataPromise === pending) initialDataPromise = null; },
+    );
+  }
+  return initialDataPromise;
+}
 
 export default function App() {
   // Navigation & Layout
@@ -77,11 +99,7 @@ export default function App() {
     let isMounted = true;
     async function loadData() {
       try {
-        const loadedSounds = await initSoundLibrary();
-        const [loadedScripts, loadedStocks] = await Promise.all([
-          getScripts().catch(() => []),
-          getStockVideos().catch(() => []),
-        ]);
+        const { sounds: loadedSounds, scripts: loadedScripts, videos: loadedStocks } = await loadInitialData();
         if (isMounted) {
           setSounds(loadedSounds);
           setScripts(loadedScripts);
@@ -335,12 +353,12 @@ export default function App() {
               <ScriptsHub
                 scripts={scripts}
                 sounds={sounds}
-                onSaveScript={(s) => {
-                  saveScript(s);
-                  setScripts((prev) => [s, ...prev.filter((item) => item.id !== s.id)]);
+                onSaveScript={async (s) => {
+                  const saved = await saveScript(s);
+                  setScripts((prev) => [saved, ...prev.filter((item) => item.id !== saved.id)]);
                 }}
-                onDeleteScript={(id) => {
-                  deleteScript(id);
+                onDeleteScript={async (id) => {
+                  await deleteScript(id);
                   setScripts((prev) => prev.filter((item) => item.id !== id));
                 }}
                 onPlaySoundById={(soundId) => {
@@ -354,9 +372,17 @@ export default function App() {
             {activeTab === 'stock' && (
               <StockVideoHub
                 videos={stockVideos}
-                onSaveVideo={(v) => {
-                  saveStockVideo(v);
-                  setStockVideos((prev) => [v, ...prev.filter((i) => i.id !== v.id)]);
+                onSaveVideo={async (v, file) => {
+                  const saved = await saveStockVideo(v, file);
+                  setStockVideos((prev) => [saved, ...prev.filter((i) => i.id !== saved.id)]);
+                }}
+                onUploadVideoFile={async (id, file) => {
+                  const saved = await uploadStockVideoFile(id, file);
+                  setStockVideos((prev) => prev.map((item) => item.id === id ? saved : item));
+                }}
+                onDeleteVideo={async (id) => {
+                  await deleteStockVideo(id);
+                  setStockVideos((prev) => prev.filter((item) => item.id !== id));
                 }}
               />
             )}

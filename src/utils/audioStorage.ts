@@ -10,6 +10,18 @@ const audioBlobs = new Map<string, Blob>();
 const audioBuffers = new Map<string, AudioBuffer>();
 const apiBase = (import.meta.env.VITE_API_URL || 'http://127.0.0.1:3001/api').replace(/\/$/, '');
 
+function publicCover(path?: string): string | undefined {
+  return path?.startsWith(`${apiBase}/images/`)
+    ? `/assets/images/${path.slice(`${apiBase}/images/`.length)}`
+    : path;
+}
+
+function servedCover(path?: string): string | undefined {
+  return path?.startsWith('/assets/images/')
+    ? `${apiBase}/images/${encodeURIComponent(path.split('/').pop() || '')}`
+    : path;
+}
+
 async function api(path: string, options?: RequestInit): Promise<Response> {
   const response = await fetch(`${apiBase}/sounds${path}`, options);
   if (!response.ok) {
@@ -37,7 +49,7 @@ export async function getAllSounds(): Promise<SoundItem[]> {
     audioFiles.set(sound.id, useApiAudio
       ? `${apiBase}/audio/${encodeURIComponent(file)}`
       : `${import.meta.env.BASE_URL}assets/audio/${encodeURIComponent(file)}`);
-    return { ...sound, sourceType: 'published' as const };
+    return { ...sound, coverImage: useApiAudio ? servedCover(sound.coverImage) : sound.coverImage, sourceType: 'published' as const };
   }).sort((a, b) => b.addedAt - a.addedAt);
 }
 
@@ -65,30 +77,37 @@ export async function getSoundAudioBuffer(id: string): Promise<AudioBuffer | nul
   return buffer;
 }
 
-export async function saveSoundToLibrary(sound: SoundItem, blob: Blob, buffer?: AudioBuffer): Promise<void> {
+export async function saveSoundToLibrary(sound: SoundItem, blob: Blob, buffer?: AudioBuffer, coverBlob?: Blob | null): Promise<void> {
   const audioBase64 = await new Promise<string>((resolve, reject) => {
     const reader = new FileReader();
     reader.onload = () => resolve(String(reader.result).split(',')[1]);
     reader.onerror = () => reject(reader.error);
     reader.readAsDataURL(blob);
   });
+  const coverBase64 = coverBlob ? await new Promise<string>((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(String(reader.result));
+    reader.onerror = () => reject(reader.error);
+    reader.readAsDataURL(coverBlob);
+  }) : undefined;
   const response = await api('', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ sound, audioBase64 }),
+    body: JSON.stringify({ sound: { ...sound, coverImage: coverBlob ? undefined : publicCover(sound.coverImage) }, audioBase64, coverBase64 }),
   });
   const saved: PublishedSound = await response.json();
   audioFiles.set(sound.id, `${apiBase}/audio/${encodeURIComponent(saved.file)}`);
   audioBlobs.set(sound.id, blob);
   if (buffer) audioBuffers.set(sound.id, buffer);
   sound.sourceType = 'published';
+  sound.coverImage = servedCover(saved.coverImage);
 }
 
 export async function updateSoundMetadata(sound: SoundItem): Promise<void> {
   await api(`/${encodeURIComponent(sound.id)}`, {
     method: 'PATCH',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(sound),
+    body: JSON.stringify({ ...sound, coverImage: publicCover(sound.coverImage) }),
   });
 }
 

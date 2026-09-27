@@ -5,8 +5,8 @@ import { ScriptBeat, SoundItem } from '../types';
 interface ScriptsHubProps {
   scripts: ScriptBeat[];
   sounds: SoundItem[];
-  onSaveScript: (script: ScriptBeat) => void;
-  onDeleteScript: (id: string) => void;
+  onSaveScript: (script: ScriptBeat) => Promise<void>;
+  onDeleteScript: (id: string) => Promise<void>;
   onPlaySoundById: (soundId: string) => void;
 }
 
@@ -22,8 +22,10 @@ export const ScriptsHub: React.FC<ScriptsHubProps> = ({
   const [newContent, setNewContent] = useState('');
   const [newCategory, setNewCategory] = useState<'hook' | 'development' | 'punchline' | 'cta'>('hook');
   const [selectedSoundId, setSelectedSoundId] = useState<string>('vine-boom');
+  const [error, setError] = useState<string | null>(null);
+  const [busy, setBusy] = useState(false);
 
-  const handleCreate = () => {
+  const handleCreate = async () => {
     if (!newTitle.trim()) return;
     const item: ScriptBeat = {
       id: `script-${Date.now()}`,
@@ -34,14 +36,20 @@ export const ScriptsHub: React.FC<ScriptsHubProps> = ({
       status: 'idea',
       updatedAt: Date.now(),
     };
-    onSaveScript(item);
-    setNewTitle('');
-    setNewContent('');
-    setIsCreating(false);
+    setBusy(true);
+    setError(null);
+    try {
+      await onSaveScript(item);
+      setNewTitle('');
+      setNewContent('');
+      setIsCreating(false);
+    } catch (cause) { setError(cause instanceof Error ? cause.message : 'No se pudo guardar el guión'); }
+    finally { setBusy(false); }
   };
 
   return (
     <div className="space-y-6">
+      {error && <p role="alert" className="text-xs text-rose-300">{error}</p>}
       {/* Header Banner */}
       <div className="flex flex-wrap items-center justify-between gap-4 p-4 rounded-3xl bg-white/4 border border-white/8 backdrop-blur-xl">
         <div className="flex items-center gap-3">
@@ -127,6 +135,7 @@ export const ScriptsHub: React.FC<ScriptsHubProps> = ({
             </button>
             <button
               onClick={handleCreate}
+              disabled={busy}
               className="px-4 py-1.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-xs font-semibold text-white transition-colors"
             >
               Guardar Guión
@@ -172,7 +181,7 @@ export const ScriptsHub: React.FC<ScriptsHubProps> = ({
                 )}
 
                 <button
-                  onClick={() => onDeleteScript(script.id)}
+                  onClick={async () => { try { await onDeleteScript(script.id); } catch (cause) { setError(cause instanceof Error ? cause.message : 'No se pudo borrar el guión'); } }}
                   className="p-1.5 rounded-lg text-neutral-500 hover:text-rose-400 hover:bg-rose-500/10 transition-colors"
                   title="Eliminar guión"
                 >

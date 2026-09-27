@@ -26,6 +26,7 @@ import {
   synthesizeBrainrotSound
 } from '../utils/audioEngine';
 import { saveSoundToLibrary } from '../utils/audioStorage';
+import { CoverCropper } from './CoverCropper';
 
 interface AudioTrimmerModalProps {
   isOpen: boolean;
@@ -75,6 +76,8 @@ export const AudioTrimmerModal: React.FC<AudioTrimmerModalProps> = ({
   const [folder, setFolder] = useState<string>('Recortes');
   const [hotkey, setHotkey] = useState<string>('');
   const [coverImage, setCoverImage] = useState<string>('/assets/images/sigma_gigachad.jpg');
+  const [coverFileToCrop, setCoverFileToCrop] = useState<File | null>(null);
+  const [customCoverBlob, setCustomCoverBlob] = useState<Blob | null>(null);
 
   // Success message & cut count
   const [savedCount, setSavedCount] = useState<number>(0);
@@ -91,6 +94,7 @@ export const AudioTrimmerModal: React.FC<AudioTrimmerModalProps> = ({
       if (initialSound) {
         setTitle(initialSound.title + ' (Corte)');
         setCategory(initialSound.category);
+        setCustomCoverBlob(null);
         setCoverImage(initialSound.coverImage || PRESET_COVERS[0].url || '');
         setFolder(initialSound.folder || 'Recortes');
       }
@@ -177,15 +181,8 @@ export const AudioTrimmerModal: React.FC<AudioTrimmerModalProps> = ({
 
   const handleCoverUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
-    if (file) {
-      const reader = new FileReader();
-      reader.onload = () => {
-        if (typeof reader.result === 'string') {
-          setCoverImage(reader.result);
-        }
-      };
-      reader.readAsDataURL(file);
-    }
+    if (file) setCoverFileToCrop(file);
+    e.target.value = '';
   };
 
   // Perform Slice & Save
@@ -237,7 +234,7 @@ export const AudioTrimmerModal: React.FC<AudioTrimmerModalProps> = ({
     setSaveError(null);
     setIsSaving(true);
     try {
-      await saveSoundToLibrary(soundRecord, wavBlob, slicedBuffer);
+      await saveSoundToLibrary(soundRecord, wavBlob, slicedBuffer, customCoverBlob);
     } catch (error) {
       setSaveError(error instanceof Error ? error.message : 'No se pudo guardar el audio');
       return;
@@ -273,6 +270,12 @@ export const AudioTrimmerModal: React.FC<AudioTrimmerModalProps> = ({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/75 backdrop-blur-xl animate-fade-in">
+      {coverFileToCrop && <CoverCropper file={coverFileToCrop} onCancel={() => setCoverFileToCrop(null)} onApply={(blob, previewUrl) => {
+        if (coverImage.startsWith('blob:')) URL.revokeObjectURL(coverImage);
+        setCustomCoverBlob(blob);
+        setCoverImage(previewUrl);
+        setCoverFileToCrop(null);
+      }} />}
       <div className="relative w-full max-w-4xl max-h-[92vh] overflow-y-auto rounded-3xl bg-[#12141e] border border-white/12 shadow-2xl p-6 space-y-6">
         {/* Modal Header */}
         <div className="flex items-center justify-between border-b border-white/8 pb-4">
@@ -515,7 +518,7 @@ export const AudioTrimmerModal: React.FC<AudioTrimmerModalProps> = ({
                         <button
                           key={preset.id}
                           type="button"
-                          onClick={() => setCoverImage(preset.url || preset.emoji || '')}
+                        onClick={() => { if (coverImage.startsWith('blob:')) URL.revokeObjectURL(coverImage); setCoverImage(preset.url || preset.emoji || ''); setCustomCoverBlob(null); }}
                           className={`h-11 rounded-xl border flex items-center justify-center gap-1.5 text-xs transition-all overflow-hidden p-1 ${
                             isSelected
                               ? 'border-indigo-500 bg-indigo-500/20 text-white ring-2 ring-indigo-500/30'

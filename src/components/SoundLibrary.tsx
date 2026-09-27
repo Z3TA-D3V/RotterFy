@@ -192,7 +192,7 @@ export const SoundLibrary: React.FC<SoundLibraryProps> = ({
                     onClick={() => (isPlaying ? onStopSound() : onPlaySound(sound))}
                     className="relative w-14 h-14 rounded-xl bg-neutral-900 border border-white/10 overflow-hidden shrink-0 cursor-pointer group-hover:scale-105 transition-transform flex items-center justify-center text-2xl shadow-inner"
                   >
-                    {sound.coverImage && (sound.coverImage.startsWith('/') || sound.coverImage.startsWith('data:image/')) ? (
+                    {sound.coverImage && (sound.coverImage.startsWith('/') || sound.coverImage.startsWith('data:image/') || sound.coverImage.startsWith('http')) ? (
                       <img
                         src={sound.coverImage}
                         alt={sound.title}
@@ -358,7 +358,7 @@ export const SoundLibrary: React.FC<SoundLibraryProps> = ({
                   </button>
 
                   <div className="w-8 h-8 rounded-lg bg-neutral-900 border border-white/10 overflow-hidden shrink-0 flex items-center justify-center text-sm">
-                    {sound.coverImage && (sound.coverImage.startsWith('/') || sound.coverImage.startsWith('data:image/')) ? (
+                    {sound.coverImage && (sound.coverImage.startsWith('/') || sound.coverImage.startsWith('data:image/') || sound.coverImage.startsWith('http')) ? (
                       <img src={sound.coverImage} alt="" className="w-full h-full object-cover" />
                     ) : (
                       <span>{sound.coverImage || '🔊'}</span>

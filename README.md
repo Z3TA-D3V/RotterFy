@@ -23,16 +23,23 @@ npm run dev
 
 Abre `http://127.0.0.1:3000`. La API escucha en `127.0.0.1:3001`.
 
-## Dónde se guardan los audios
+## Dónde se guardan los archivos
 
-Los 33 sonidos existentes y los recortes nuevos están en
+Los sonidos existentes y los recortes nuevos están en
 `public/assets/audio/`. El archivo `manifest.json` guarda sus títulos,
 categorías y demás datos. La API escribe y borra tanto los WAV como sus entradas
 del catálogo. Para cambiar la ubicación cuando muevas la API a otro repositorio,
 configura `AUDIO_DIR` según [api/README.md](api/README.md).
 
-**Exportar biblioteca** descarga un ZIP de copia de seguridad. Los guiones y la
-lista de vídeos de stock aún usan IndexedDB; los audios no dependen de él.
+Las portadas recortadas se guardan en `public/assets/images/`, los vídeos en
+`public/assets/videos/` y sus fichas y los guiones en `public/assets/data/`.
+La API gestiona las altas y bajas. Al abrir esta versión en el navegador que
+guardaba guiones y fichas en IndexedDB, se importan una vez a los archivos JSON;
+después la aplicación lee y escribe mediante la API.
+
+**Exportar biblioteca** descarga un ZIP de los sonidos. Para una copia completa,
+copia también `public/assets/data/`, `public/assets/images/` y
+`public/assets/videos/`.
 
 ## Versión compilada en local
 
