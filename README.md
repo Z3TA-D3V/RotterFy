@@ -31,6 +31,10 @@ categorías y demás datos. La API escribe y borra tanto los WAV como sus entrad
 del catálogo. Para cambiar la ubicación cuando muevas la API a otro repositorio,
 configura `AUDIO_DIR` según [api/README.md](api/README.md).
 
+Al abrir un sonido con **Editar** y guardar los cambios, la API reemplaza su WAV,
+portada y metadatos en la misma entrada del catálogo. Un recorte de un archivo
+nuevo crea una entrada nueva.
+
 Las portadas recortadas se guardan en `public/assets/images/`, los vídeos en
 `public/assets/videos/` y sus fichas y los guiones en `public/assets/data/`.
 La API gestiona las altas y bajas. Al abrir esta versión en el navegador que

@@ -264,6 +264,7 @@ export default function App() {
   // Callback when a new sound is saved in trimmer
   const handleSoundSaved = (newSound: SoundItem) => {
     setSounds((prev) => [newSound, ...prev.filter((s) => s.id !== newSound.id)]);
+    setCurrentPlayingSound((prev) => prev?.id === newSound.id ? newSound : prev);
   };
 
   const handleExportLibrary = async () => {

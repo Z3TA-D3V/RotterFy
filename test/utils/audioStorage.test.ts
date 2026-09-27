@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { deleteSoundFromLibrary, getAllSounds, getSoundAudioBuffer, getSoundBlob, incrementPlayCount,
-  saveSoundToLibrary, updateSoundMetadata } from '../../src/utils/audioStorage';
+  replaceSoundInLibrary, saveSoundToLibrary, updateSoundMetadata } from '../../src/utils/audioStorage';
 import { sound } from '../fixtures';
 
 describe('audioStorage', () => {
@@ -116,5 +116,38 @@ describe('audioStorage', () => {
     expect(await getSoundAudioBuffer('decode-once')).toBe(decoded);
     expect(decodeAudioData).toHaveBeenCalledTimes(1);
     expect(fetchMock).toHaveBeenCalledTimes(2);
+  });
+
+  it('reemplaza el WAV y la portada de un ID existente y actualiza la caché tras confirmación', async () => {
+    const item = { ...sound, id: 'replace-1', coverImage: 'blob:preview' };
+    const newBlob = new Blob(['new'], { type: 'audio/wav' });
+    const cover = new Blob(['jpeg'], { type: 'image/jpeg' });
+    fetchMock.mockResolvedValueOnce(Response.json([{ ...item, file: 'replace-1.wav' }]))
+      .mockResolvedValueOnce(new Response('old', { headers: { 'Content-Type': 'audio/wav' } }))
+      .mockResolvedValueOnce(Response.json({ ...item, file: 'replace-1.wav', coverImage: '/assets/images/replace-1.jpg' }));
+    await getAllSounds();
+    expect((await getSoundBlob(item.id))?.size).toBe(3);
+    await replaceSoundInLibrary(item, newBlob, undefined, cover);
+    expect(fetchMock.mock.calls[2][1].method).toBe('PUT');
+    const sent = JSON.parse(fetchMock.mock.calls[2][1].body);
+    expect(sent.sound.id).toBe(item.id);
+    expect(sent.audioBase64).toBeTruthy();
+    expect(sent.coverBase64).toMatch(/^data:image\/jpeg;base64,/);
+    expect(await getSoundBlob(item.id)).toBe(newBlob);
+    expect(item.coverImage).toBe('http://127.0.0.1:3001/api/images/replace-1.jpg');
+    expect(fetchMock).toHaveBeenCalledTimes(3);
+  });
+
+  it('conserva el WAV anterior en caché cuando falla el reemplazo', async () => {
+    const item = { ...sound, id: 'replace-fail' };
+    const oldBlob = new Blob(['old'], { type: 'audio/wav' });
+    fetchMock.mockResolvedValueOnce(Response.json([{ ...item, file: 'replace-fail.wav' }]))
+      .mockResolvedValueOnce(new Response(oldBlob))
+      .mockResolvedValueOnce(Response.json({ error: 'Sin espacio' }, { status: 507 }));
+    await getAllSounds();
+    const cached = await getSoundBlob(item.id);
+    await expect(replaceSoundInLibrary(item, new Blob(['new'], { type: 'audio/wav' }))).rejects.toThrow('Sin espacio');
+    expect(await getSoundBlob(item.id)).toBe(cached);
+    expect(fetchMock).toHaveBeenCalledTimes(3);
   });
 });

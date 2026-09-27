@@ -79,19 +79,21 @@ export async function getSoundAudioBuffer(id: string): Promise<AudioBuffer | nul
   return buffer;
 }
 
-export async function saveSoundToLibrary(sound: SoundItem, blob: Blob, buffer?: AudioBuffer, coverBlob?: Blob | null): Promise<void> {
-  const audioBase64 = await new Promise<string>((resolve, reject) => {
+function readBlobAsBase64(blob: Blob, includePrefix = false): Promise<string> {
+  return new Promise((resolve, reject) => {
     const reader = new FileReader();
-    reader.onload = () => resolve(String(reader.result).split(',')[1]);
+    reader.onload = () => {
+      const result = String(reader.result);
+      resolve(includePrefix ? result : result.split(',')[1]);
+    };
     reader.onerror = () => reject(reader.error);
     reader.readAsDataURL(blob);
   });
-  const coverBase64 = coverBlob ? await new Promise<string>((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onload = () => resolve(String(reader.result));
-    reader.onerror = () => reject(reader.error);
-    reader.readAsDataURL(coverBlob);
-  }) : undefined;
+}
+
+export async function saveSoundToLibrary(sound: SoundItem, blob: Blob, buffer?: AudioBuffer, coverBlob?: Blob | null): Promise<void> {
+  const audioBase64 = await readBlobAsBase64(blob);
+  const coverBase64 = coverBlob ? await readBlobAsBase64(coverBlob, true) : undefined;
   const response = await api('', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
@@ -103,6 +105,26 @@ export async function saveSoundToLibrary(sound: SoundItem, blob: Blob, buffer?: 
   if (buffer) audioBuffers.set(sound.id, buffer);
   sound.sourceType = 'published';
   sound.coverImage = servedCover(saved.coverImage);
+}
+
+export async function replaceSoundInLibrary(sound: SoundItem, blob: Blob, buffer?: AudioBuffer, coverBlob?: Blob | null): Promise<void> {
+  const audioBase64 = await readBlobAsBase64(blob);
+  const coverBase64 = coverBlob ? await readBlobAsBase64(coverBlob, true) : undefined;
+  const response = await api(`/${encodeURIComponent(sound.id)}`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ sound: { ...sound, coverImage: coverBlob ? undefined : publicCover(sound.coverImage) }, audioBase64, coverBase64 }),
+  });
+  const saved: PublishedSound = await response.json();
+  audioFiles.set(sound.id, `${apiBase}/audio/${encodeURIComponent(saved.file)}`);
+  audioBlobs.set(sound.id, blob);
+  if (buffer) audioBuffers.set(sound.id, buffer);
+  else audioBuffers.delete(sound.id);
+  sound.sourceType = 'published';
+  sound.coverImage = servedCover(saved.coverImage);
+  sound.addedAt = saved.addedAt;
+  sound.favorite = saved.favorite;
+  sound.playCount = saved.playCount;
 }
 
 export async function updateSoundMetadata(sound: SoundItem): Promise<void> {

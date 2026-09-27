@@ -23,7 +23,7 @@ import {
   synthesizeBrainrotSound,
   stopCurrentPlayback
 } from '../utils/audioEngine';
-import { saveSoundToLibrary } from '../utils/audioStorage';
+import { replaceSoundInLibrary, saveSoundToLibrary } from '../utils/audioStorage';
 import { CoverCropper } from './CoverCropper';
 
 interface StudioWorkspaceProps {
@@ -89,18 +89,20 @@ export const StudioWorkspace: React.FC<StudioWorkspaceProps> = ({
 
   useEffect(() => {
     if (initialAudioBlob) {
-      loadBlob(initialAudioBlob, initialSound?.title || 'archivo_audio.mp3');
+      loadBlob(initialAudioBlob, initialSound?.originalFileName || initialSound?.title || 'archivo_audio.mp3', Boolean(initialSound));
       if (initialSound) {
-        setTitle(`${initialSound.title} (Corte)`);
+        setTitle(initialSound.title);
         setCategory(initialSound.category);
+        setTagsString(initialSound.tags.join(', '));
+        setHotkey(initialSound.hotkey || '');
         setCustomCoverBlob(null);
         setCoverImage(initialSound.coverImage || PRESET_COVERS[0].url || '');
-        setFolder(initialSound.folder || 'Recortes');
+        setFolder(initialSound.folder || '');
       }
     }
   }, [initialAudioBlob, initialSound]);
 
-  const loadBlob = async (blob: Blob, name: string) => {
+  const loadBlob = async (blob: Blob, name: string, preserveTitle = false) => {
     setIsLoadingFile(true);
     try {
       const buffer = await decodeAudioBlob(blob);
@@ -110,7 +112,7 @@ export const StudioWorkspace: React.FC<StudioWorkspaceProps> = ({
       const initialDuration = Math.min(buffer.duration, 2.2);
       setEndSec(initialDuration);
       setLoadError(null);
-      if (!title || title.includes('Vine Boom Cut')) {
+      if (!preserveTitle && (!title || title.includes('Vine Boom Cut'))) {
         setTitle(`${name.replace(/\.[^/.]+$/, '')} #1`);
       }
     } catch (e) {
@@ -205,7 +207,7 @@ export const StudioWorkspace: React.FC<StudioWorkspaceProps> = ({
     const wavBlob = bufferToWaveBlob(slicedBuffer);
     const peaks = extractWaveformPeaks(slicedBuffer, 64);
     const cleanDuration = Math.round(slicedBuffer.duration * 100) / 100;
-    const soundId = `cut-${Date.now()}`;
+    const soundId = initialSound?.id || `cut-${Date.now()}`;
 
     const tags = tagsString
       .split(',')
@@ -220,9 +222,9 @@ export const StudioWorkspace: React.FC<StudioWorkspaceProps> = ({
       duration: cleanDuration,
       coverImage: coverImage || PRESET_COVERS[0].url,
       waveformPeaks: peaks,
-      addedAt: Date.now(),
-      favorite: false,
-      playCount: 0,
+      addedAt: initialSound?.addedAt ?? Date.now(),
+      favorite: initialSound?.favorite ?? false,
+      playCount: initialSound?.playCount ?? 0,
       hotkey: hotkey || undefined,
       originalFileName: fileName,
       folder: folder || 'Recortes',
@@ -233,7 +235,8 @@ export const StudioWorkspace: React.FC<StudioWorkspaceProps> = ({
     setSaveError(null);
     setIsSaving(true);
     try {
-      await saveSoundToLibrary(soundRecord, wavBlob, slicedBuffer, customCoverBlob);
+      if (initialSound) await replaceSoundInLibrary(soundRecord, wavBlob, slicedBuffer, customCoverBlob);
+      else await saveSoundToLibrary(soundRecord, wavBlob, slicedBuffer, customCoverBlob);
     } catch (error) {
       setSaveError(error instanceof Error ? error.message : 'No se pudo guardar el audio');
       return;
@@ -242,7 +245,7 @@ export const StudioWorkspace: React.FC<StudioWorkspaceProps> = ({
     }
     onSoundSaved(soundRecord);
 
-    setSessionCuts((prev) => [soundRecord, ...prev]);
+    setSessionCuts((prev) => [soundRecord, ...prev.filter((cut) => cut.id !== soundRecord.id)]);
 
     if (shouldDownload) {
       const url = URL.createObjectURL(wavBlob);
@@ -254,13 +257,15 @@ export const StudioWorkspace: React.FC<StudioWorkspaceProps> = ({
     }
 
     // Auto-advance title for the next cut from the same file!
-    setTitle((prev) => {
-      const match = prev.match(/^(.*?)(?:#|v|corte\s*)(\d+)$/i);
-      if (match) {
-        return `${match[1].trim()} #${parseInt(match[2], 10) + 1}`;
-      }
-      return `${prev} #2`;
-    });
+    if (!initialSound) {
+      setTitle((prev) => {
+        const match = prev.match(/^(.*?)(?:#|v|corte\s*)(\d+)$/i);
+        if (match) {
+          return `${match[1].trim()} #${parseInt(match[2], 10) + 1}`;
+        }
+        return `${prev} #2`;
+      });
+    }
   };
 
   const handlePlayCut = (cut: SoundItem) => {
@@ -648,7 +653,7 @@ export const StudioWorkspace: React.FC<StudioWorkspaceProps> = ({
                   className="w-full py-3 rounded-2xl bg-gradient-to-r from-indigo-600 via-indigo-500 to-purple-600 hover:from-indigo-500 hover:to-purple-500 text-white text-xs font-semibold shadow-lg shadow-indigo-600/30 transition-all flex items-center justify-center gap-2 active:scale-[0.98]"
                 >
                   <Scissors className="w-4 h-4" />
-                  <span>Cortar y Guardar en Librería</span>
+                  <span>{initialSound ? 'Guardar cambios en Librería' : 'Cortar y Guardar en Librería'}</span>
                 </button>
 
                 <button
