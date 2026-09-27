@@ -250,11 +250,16 @@ export const WaveformTrimmer: React.FC<WaveformTrimmerProps> = ({
   // Pause & snap OUT marker to current playhead position
   const pauseAndSetOut = useCallback(() => {
     if (!isPlaying) return;
-    const snappedTime = Math.round(currentTime * 1000) / 1000;
+    const elapsed = ((performance.now() - playStartTimeRef.current) / 1000) * playbackSpeed;
+    const rangeDuration = endSec - startSec;
+    const playheadTime = isLooping && rangeDuration > 0
+      ? startSec + (elapsed % rangeDuration)
+      : Math.min(endSec, startSec + elapsed);
+    const snappedTime = Math.round(playheadTime * 1000) / 1000;
     const newEnd = Math.max(startSec + 0.03, Math.min(duration, snappedTime));
     stopAudioRef.current();
     onRangeChange(startSec, newEnd);
-  }, [isPlaying, currentTime, startSec, duration, onRangeChange]);
+  }, [isPlaying, startSec, endSec, duration, isLooping, playbackSpeed, onRangeChange]);
 
   const pauseAndSetOutRef = useRef(pauseAndSetOut);
   pauseAndSetOutRef.current = pauseAndSetOut;
@@ -712,6 +717,16 @@ export const WaveformTrimmer: React.FC<WaveformTrimmerProps> = ({
             title="Reproducir selección (Espacio)"
           >
             {isPlaying ? <Pause className="w-5 h-5 fill-current" /> : <Play className="w-5 h-5 fill-current ml-0.5" />}
+          </button>
+
+          <button
+            onClick={pauseAndSetOut}
+            disabled={!isPlaying}
+            className="w-10 h-10 rounded-xl border border-indigo-500/40 bg-indigo-500/15 text-indigo-300 hover:bg-indigo-500/25 flex items-center justify-center transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+            title="Fijar OUT en la posición actual y detener (P)"
+            aria-label="Fijar OUT en la posición actual y detener"
+          >
+            <Scissors className="w-4 h-4" />
           </button>
 
           <button
