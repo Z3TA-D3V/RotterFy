@@ -26,6 +26,21 @@ export interface ScriptBeat {
   associatedSoundId?: string;
   status: 'idea' | 'recording' | 'editing' | 'published';
   updatedAt: number;
+  createdAt?: number;
+  systemPromptUsed?: string;
+  reasoningEffort?: 'low' | 'medium' | 'high';
+  model?: 'gpt-6-luna' | 'gpt-6-sol' | 'gpt-6-astra' | 'o3-mini' | 'o1';
+  totalCost?: number;
+  chatHistory?: ScriptChatMessage[];
+}
+
+export interface ScriptChatMessage {
+  role: 'user' | 'assistant';
+  content: string;
+  model?: string;
+  timestamp: number;
+  usage?: { input_tokens: number; output_tokens: number; total_tokens: number; input_tokens_details?: { cached_tokens?: number } };
+  cost?: number | null;
 }
 
 export interface StockVideoAsset {

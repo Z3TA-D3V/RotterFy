@@ -35,10 +35,10 @@ describe('App', () => {
     vi.stubGlobal('fetch', fetchMock);
     render(<App />);
     fireEvent.click(await screen.findByText('Guiones & Hooks'));
-    fireEvent.click(screen.getByText(/Nuevo Gui/));
-    fireEvent.change(screen.getByPlaceholderText(/framework de JS/), { target: { value: 'Idea guardada' } });
-    fireEvent.click(screen.getByText(/Guardar Gui/));
-    await waitFor(() => expect(screen.getByText('Idea guardada')).toBeInTheDocument());
+    fireEvent.click(screen.getByRole('button', { name: 'Nuevo Guión' }));
+    fireEvent.change(screen.getByLabelText('Título'), { target: { value: 'Idea guardada' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Guardar' }));
+    await waitFor(() => expect(screen.getByRole('button', { name: /Idea guardada/ })).toBeInTheDocument());
     expect(fetchMock.mock.calls.some(([url, options]) => String(url).endsWith('/scripts') && options?.method === 'POST')).toBe(true);
   });
   it('mantiene el favorito anterior cuando la API rechaza el cambio', async () => {

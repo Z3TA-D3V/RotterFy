@@ -320,8 +320,10 @@ export default function App() {
         />
 
         {/* Scrollable Workspace Body */}
-        <main className="flex-1 overflow-y-auto p-6 md:p-8 pb-32">
-          <div className="max-w-7xl mx-auto space-y-6">
+        <main className={activeTab === 'scripts'
+          ? 'flex-1 min-h-0 overflow-y-auto xl:overflow-hidden p-3 md:p-5'
+          : 'flex-1 overflow-y-auto p-6 md:p-8 pb-32'}>
+          <div className={activeTab === 'scripts' ? 'h-full min-h-0 w-full' : 'max-w-7xl mx-auto space-y-6'}>
             {/* Tab: Sound Library */}
             {activeTab === 'library' && (
               <SoundLibrary
@@ -367,6 +369,7 @@ export default function App() {
                   const saved = await saveScript(s);
                   setScripts((prev) => [saved, ...prev.filter((item) => item.id !== saved.id)]);
                 }}
+                onSyncScript={(saved) => setScripts((prev) => [saved, ...prev.filter((item) => item.id !== saved.id)])}
                 onDeleteScript={async (id) => {
                   await deleteScript(id);
                   setScripts((prev) => prev.filter((item) => item.id !== id));
