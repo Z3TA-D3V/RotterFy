@@ -2,11 +2,10 @@
  * RotVault - Brainrot Sound Studio & Creator Command Center
  * Designed for content creators & Angular/React developers.
  */
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { Sidebar, ActiveTab } from './components/Sidebar';
 import { TopHeader } from './components/TopHeader';
 import { SoundLibrary } from './components/SoundLibrary';
-import { WaveformTrimmer } from './components/WaveformTrimmer';
 import { StudioWorkspace } from './components/StudioWorkspace';
 import { AudioTrimmerModal } from './components/AudioTrimmerModal';
 import { OpenFileModal } from './components/OpenFileModal';
@@ -66,7 +65,6 @@ export default function App() {
   const [sounds, setSounds] = useState<SoundItem[]>([]);
   const [scripts, setScripts] = useState<ScriptBeat[]>([]);
   const [stockVideos, setStockVideos] = useState<StockVideoAsset[]>([]);
-  const [isLoaded, setIsLoaded] = useState(false);
   const [isExporting, setIsExporting] = useState(false);
   const [exportStatus, setExportStatus] = useState('');
 
@@ -104,10 +102,9 @@ export default function App() {
           setSounds(loadedSounds);
           setScripts(loadedScripts);
           setStockVideos(loadedStocks);
-          setIsLoaded(true);
         }
       } catch (err) {
-        console.error('Failed to initialize local creator database:', err);
+        console.error('No se pudo cargar el catálogo local:', err);
       }
     }
     loadData();

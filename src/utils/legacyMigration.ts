@@ -29,7 +29,7 @@ export async function loadCreatorLists(): Promise<{ scripts: ScriptBeat[]; video
   let importedVideos: StockVideoAsset[] = [];
   if (!scripts.length) {
     const old = await readLegacy<ScriptBeat>('scripts');
-    importedScripts = await Promise.all(old.filter((item) => !['script-1', 'script-2', 'script-3'].includes(item.id)).map(saveScript));
+    importedScripts = await Promise.all(old.filter((item) => !['script-1', 'script-2', 'script-3'].includes(item.id)).map((item) => saveScript(item)));
   }
   if (!videos.length) {
     const old = await readLegacy<StockVideoAsset>('stock_videos');

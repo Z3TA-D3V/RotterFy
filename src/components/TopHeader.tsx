@@ -84,7 +84,7 @@ export const TopHeader: React.FC<TopHeaderProps> = ({
             onClick={onExportLibrary}
             disabled={isExporting}
             className="h-9 px-3 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 text-xs font-medium text-neutral-300 hover:text-white flex items-center gap-2 transition-all disabled:opacity-50"
-            title="Descargar los audios guardados en este navegador y su catálogo en un ZIP"
+            title="Descargar los audios de la biblioteca y su catálogo en un ZIP"
             aria-label="Exportar biblioteca"
           >
             <Download className="w-3.5 h-3.5" />

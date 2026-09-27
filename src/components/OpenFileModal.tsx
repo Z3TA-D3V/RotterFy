@@ -8,8 +8,6 @@ import {
   Terminal, 
   HardDrive, 
   ExternalLink,
-  Sparkles,
-  Volume2,
   FolderCheck,
   RefreshCw
 } from 'lucide-react';
@@ -114,44 +112,6 @@ export const OpenFileModal: React.FC<OpenFileModalProps> = ({
       console.error('Error saving to linked directory:', err);
       // Fallback
       handleDownload();
-    } finally {
-      setIsSavingDirect(false);
-    }
-  };
-
-  // Save via showSaveFilePicker
-  const handleSaveWithPicker = async () => {
-    try {
-      setIsSavingDirect(true);
-      let blob = sound.audioBlob;
-      if (!blob) {
-        blob = (await getSoundBlob(sound.id)) || undefined;
-      }
-      if (!blob) throw new Error('Audio no disponible');
-
-      if ('showSaveFilePicker' in window) {
-        // @ts-expect-error File System Access API
-        const handle = await window.showSaveFilePicker({
-          suggestedName: sanitizedFileName,
-          types: [
-            {
-              description: 'Archivo de Audio WAV',
-              accept: { 'audio/wav': ['.wav'] },
-            },
-          ],
-        });
-        const writable = await handle.createWritable();
-        await writable.write(blob);
-        await writable.close();
-        setSaveDirectStatus('¡Guardado directamente en tu carpeta seleccionada!');
-        setTimeout(() => setSaveDirectStatus(null), 4000);
-      } else {
-        handleDownload();
-      }
-    } catch (err: unknown) {
-      if ((err as Error).name !== 'AbortError') {
-        console.error('Error saving file:', err);
-      }
     } finally {
       setIsSavingDirect(false);
     }

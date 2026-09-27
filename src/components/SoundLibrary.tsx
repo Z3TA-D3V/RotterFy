@@ -6,17 +6,13 @@ import {
   FolderOpen, 
   Star, 
   Trash2, 
-  Sparkles, 
-  Volume2, 
   VolumeX, 
   LayoutGrid, 
   List, 
   SlidersHorizontal,
   Flame,
-  RotateCcw,
-  Zap
 } from 'lucide-react';
-import { SoundItem, SoundCategory } from '../types';
+import { SoundItem } from '../types';
 
 interface SoundLibraryProps {
   sounds: SoundItem[];

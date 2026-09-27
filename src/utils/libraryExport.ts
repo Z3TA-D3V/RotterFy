@@ -17,7 +17,7 @@ export async function exportLocalLibrary(): Promise<number> {
       : blob.type.includes('webm') ? 'webm' : 'wav';
     const safeId = sound.id.replace(/[^a-zA-Z0-9_-]/g, '_');
     const file = `${String(index + 1).padStart(3, '0')}-${safeId}.${extension}`;
-    const { audioBlob: _audioBlob, audioBlobUrl: _audioBlobUrl, sourceType: _sourceType, ...metadata } = sound;
+    const { audioBlob: _audioBlob, sourceType: _sourceType, ...metadata } = sound;
 
     zip.file(file, blob);
     manifest.push({ ...metadata, file });

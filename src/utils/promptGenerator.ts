@@ -29,7 +29,9 @@ Soy creador de contenido en redes sociales (TikTok, Reels, YouTube Shorts) y pro
   - Slicer no destructivo: extracción de muestras PCM en un nuevo \`AudioBuffer\`, cálculo de picos y curvas de fundido (Fade In/Out).
   - Encoder WAV RIFF de 16 bits nativo en JavaScript puro para exportar Blobs instantáneos.
 - **Persistencia Local Robusta**:
-  - Servidor local para guardar los WAV como archivos en public/assets/audio y actualizar manifest.json al crear o borrar sonidos.
+  - Servidor local independiente para guardar WAV en public/assets/audio, portadas en public/assets/images y vídeos en public/assets/videos.
+  - Guardar guiones y fichas de vídeo en JSON dentro de public/assets/data. La API controla altas, consultas y borrados; el navegador no conserva estos datos en IndexedDB.
+  - Tests unitarios de cada componente y utilidades, con ejecución automática en CI.
 - **Diseño Visual & Principios Estéticos**:
   - Paleta oscura sofisticada (\`#0c0d12\`, zinc/slate neutro) con acentos sutiles.
   - Paneles de vidrio esmerilado con \`backdrop-filter: blur(20px)\` y bordes sutiles \`border-white/10\`.

@@ -3,17 +3,12 @@ import {
   X, 
   Upload, 
   Scissors, 
-  Music, 
   Sparkles, 
   Download, 
   Check, 
-  Sliders, 
   FolderPlus, 
-  Layers, 
   Image as ImageIcon,
-  Volume2,
   FileAudio,
-  Radio
 } from 'lucide-react';
 import { WaveformTrimmer } from './WaveformTrimmer';
 import { SoundItem, SoundCategory } from '../types';

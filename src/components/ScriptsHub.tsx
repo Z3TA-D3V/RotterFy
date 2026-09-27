@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { FileText, Plus, Play, Sparkles, Check, Trash2, Clock, Volume2 } from 'lucide-react';
+import { FileText, Plus, Play, Trash2 } from 'lucide-react';
 import { ScriptBeat, SoundItem } from '../types';
 
 interface ScriptsHubProps {
@@ -20,7 +20,7 @@ export const ScriptsHub: React.FC<ScriptsHubProps> = ({
   const [isCreating, setIsCreating] = useState(false);
   const [newTitle, setNewTitle] = useState('');
   const [newContent, setNewContent] = useState('');
-  const [newCategory, setNewCategory] = useState<'hook' | 'development' | 'punchline' | 'cta'>('hook');
+  const newCategory: ScriptBeat['category'] = 'hook';
   const [selectedSoundId, setSelectedSoundId] = useState<string>('vine-boom');
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);

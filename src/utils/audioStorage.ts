@@ -1,7 +1,7 @@
 import { SoundItem } from '../types';
 import { decodeAudioBlob } from './audioEngine';
 
-export interface PublishedSound extends Omit<SoundItem, 'audioBlob' | 'audioBlobUrl' | 'sourceType'> {
+export interface PublishedSound extends Omit<SoundItem, 'audioBlob' | 'sourceType'> {
   file: string;
 }
 

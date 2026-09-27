@@ -4,18 +4,13 @@ import {
   Upload, 
   Sparkles, 
   Download, 
-  Check, 
   FolderPlus, 
   FileAudio, 
   Play, 
   Pause, 
-  RotateCcw, 
-  Sliders, 
   Image as ImageIcon,
   FolderOpen,
-  Trash2,
   Layers,
-  ArrowRight
 } from 'lucide-react';
 import { WaveformTrimmer } from './WaveformTrimmer';
 import { SoundItem, SoundCategory } from '../types';
@@ -26,7 +21,6 @@ import {
   bufferToWaveBlob, 
   extractWaveformPeaks,
   synthesizeBrainrotSound,
-  playAudioBuffer,
   stopCurrentPlayback
 } from '../utils/audioEngine';
 import { saveSoundToLibrary } from '../utils/audioStorage';
@@ -83,7 +77,6 @@ export const StudioWorkspace: React.FC<StudioWorkspaceProps> = ({
 
   // Multi-cut session history
   const [sessionCuts, setSessionCuts] = useState<SoundItem[]>([]);
-  const [lastSavedSound, setLastSavedSound] = useState<SoundItem | null>(null);
   const [saveError, setSaveError] = useState<string | null>(null);
   const [isSaving, setIsSaving] = useState(false);
 
@@ -250,7 +243,6 @@ export const StudioWorkspace: React.FC<StudioWorkspaceProps> = ({
     onSoundSaved(soundRecord);
 
     setSessionCuts((prev) => [soundRecord, ...prev]);
-    setLastSavedSound(soundRecord);
 
     if (shouldDownload) {
       const url = URL.createObjectURL(wavBlob);

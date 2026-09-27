@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { Play, Square, Zap, Flame, Volume2, Sparkles, AlertCircle } from 'lucide-react';
+import { Square, Zap } from 'lucide-react';
 import { SoundItem } from '../types';
 
 interface SoundboardModeProps {

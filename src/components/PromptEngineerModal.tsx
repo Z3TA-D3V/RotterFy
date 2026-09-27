@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Sparkles, Copy, Check, Terminal, Code2, BookOpen, Layers, X } from 'lucide-react';
+import { Sparkles, Copy, Check, X } from 'lucide-react';
 import { REVERSE_ENGINEERED_PROMPT_ES } from '../utils/promptGenerator';
 
 interface PromptEngineerModalProps {
@@ -12,7 +12,7 @@ export const PromptEngineerModal: React.FC<PromptEngineerModalProps> = ({
   onClose,
 }) => {
   const [copied, setCopied] = useState(false);
-  const [activeSubTab, setActiveSubTab] = useState<'prompt' | 'angular' | 'workflow'>('prompt');
+  const [activeSubTab, setActiveSubTab] = useState<'prompt' | 'angular'>('prompt');
 
   if (!isOpen) return null;
 

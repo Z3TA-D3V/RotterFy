@@ -603,7 +603,6 @@ export async function decodeAudioBlob(blob: Blob): Promise<AudioBuffer> {
 
 // Global active source for sound preview
 let currentActiveSource: AudioBufferSourceNode | null = null;
-let currentGainNode: GainNode | null = null;
 
 export function playAudioBuffer(
   buffer: AudioBuffer,
@@ -649,7 +648,6 @@ export function playAudioBuffer(
     hasEnded = true;
     if (currentActiveSource === source) {
       currentActiveSource = null;
-      currentGainNode = null;
     }
     options?.onEnded?.();
   };
@@ -662,7 +660,6 @@ export function playAudioBuffer(
   }
 
   currentActiveSource = source;
-  currentGainNode = gain;
 
   return {
     stop: () => {
@@ -675,7 +672,6 @@ export function playAudioBuffer(
       }
       if (currentActiveSource === source) {
         currentActiveSource = null;
-        currentGainNode = null;
       }
     },
   };
@@ -689,6 +685,5 @@ export function stopCurrentPlayback() {
       // ignore
     }
     currentActiveSource = null;
-    currentGainNode = null;
   }
 }

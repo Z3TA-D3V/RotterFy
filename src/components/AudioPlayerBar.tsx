@@ -1,5 +1,5 @@
 import React from 'react';
-import { Play, Pause, Square, RotateCcw, Volume2, VolumeX, FastForward, Scissors, FolderOpen } from 'lucide-react';
+import { Play, Pause, Square, RotateCcw, Volume2, Scissors, FolderOpen } from 'lucide-react';
 import { SoundItem } from '../types';
 
 interface AudioPlayerBarProps {

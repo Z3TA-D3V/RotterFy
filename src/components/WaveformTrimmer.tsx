@@ -9,7 +9,6 @@ import {
   Scissors, 
   ArrowLeftRight,
   MoveHorizontal,
-  StepForward
 } from 'lucide-react';
 import { 
   getAudioContext, 

@@ -7,7 +7,6 @@ export interface SoundItem {
   tags: string[];
   duration: number; // in seconds
   coverImage?: string;
-  audioBlobUrl?: string; // object URL or base64
   audioBlob?: Blob;
   waveformPeaks?: number[]; // normalized 0-1 values for visualizer
   addedAt: number;
@@ -16,14 +15,7 @@ export interface SoundItem {
   hotkey?: string;
   originalFileName?: string;
   folder?: string;
-  sourceType: 'preset' | 'user-upload' | 'trimmed-clip' | 'published';
-}
-
-export interface FolderCategory {
-  id: string;
-  name: string;
-  iconName: string;
-  count?: number;
+  sourceType: 'trimmed-clip' | 'published';
 }
 
 export interface ScriptBeat {
@@ -45,12 +37,4 @@ export interface StockVideoAsset {
   localPath?: string;
   notes: string;
   favorite: boolean;
-}
-
-export interface LibrarySettings {
-  defaultExportFormat: 'wav' | 'mp3';
-  autoNormalizeVolume: boolean;
-  creatorDirectoryName: string;
-  playbackSpeed: number;
-  soundboardVolume: number;
 }

@@ -53,3 +53,16 @@ npm start
 Una publicación estática puede consultar los sonidos incluidos en el build.
 Guardar o borrar desde otro ordenador requeriría publicar también la API con
 autenticación y un almacenamiento accesible para ella.
+
+## Pruebas y comprobaciones
+
+```bash
+pnpm install
+pnpm check
+```
+
+`pnpm check` ejecuta TypeScript, las pruebas unitarias con cobertura y el build.
+La carpeta `test/` reproduce las rutas de `src/`: cada `.tsx` tiene su
+correspondiente `.test.tsx`. La prueba `test/structure.test.ts` comprueba esta
+regla automáticamente. La API tiene pruebas propias: `cd api && pnpm test`.
+Los dos repositorios ejecutan sus comprobaciones en GitHub Actions.

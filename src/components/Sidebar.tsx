@@ -6,9 +6,7 @@ import {
   FileText, 
   Film, 
   Sparkles, 
-  FolderOpen,
   HardDrive,
-  Github,
   ChevronLeft,
   ChevronRight
 } from 'lucide-react';
