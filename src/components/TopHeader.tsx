@@ -12,6 +12,8 @@ interface TopHeaderProps {
   onExportLibrary: () => void;
   isExporting: boolean;
   exportStatus: string;
+  showPrompt?: boolean;
+  showTrimmer?: boolean;
 }
 
 export const TopHeader: React.FC<TopHeaderProps> = ({
@@ -24,6 +26,8 @@ export const TopHeader: React.FC<TopHeaderProps> = ({
   onExportLibrary,
   isExporting,
   exportStatus,
+  showPrompt = true,
+  showTrimmer = true,
 }) => {
   const getTabBreadcrumb = () => {
     switch (activeTab) {
@@ -35,10 +39,16 @@ export const TopHeader: React.FC<TopHeaderProps> = ({
         return 'Soundboard Rápido (Teclas 1-9)';
       case 'scripts':
         return 'Guiones Virales (TikTok / Reels)';
+      case 'system-prompts':
+        return 'Guiones & Hooks / System Prompts';
+      case 'recording':
+        return 'Teleprónter y Grabación de Voz';
       case 'stock':
         return 'Vídeos Stock Brainrot (Minecraft / Subway Surfers)';
       case 'prompt':
         return 'Ingeniería Inversa / Prompt Maestro';
+      case 'settings':
+        return 'Opciones';
       default:
         return 'Librería';
     }
@@ -91,22 +101,22 @@ export const TopHeader: React.FC<TopHeaderProps> = ({
             <span className="hidden lg:inline">{isExporting ? 'Exportando...' : 'Exportar biblioteca'}</span>
           </button>
         )}
-        <button
+        {showPrompt && <button
           onClick={onOpenPrompt}
           className="h-9 px-3 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 text-xs font-medium text-neutral-300 hover:text-white flex items-center gap-2 transition-all"
           title="Ver prompt optimizado para replicar esto en Angular"
         >
           <Sparkles className="w-3.5 h-3.5 text-amber-400" />
           <span className="hidden sm:inline">Prompt Maestro</span>
-        </button>
+        </button>}
 
-        <button
+        {showTrimmer && <button
           onClick={onOpenTrimmer}
           className="h-9 px-3.5 rounded-xl bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-500 hover:to-violet-500 text-white text-xs font-medium shadow-md shadow-indigo-600/20 flex items-center gap-2 transition-all active:scale-[0.98]"
         >
           <Plus className="w-4 h-4" />
           <span>Subir & Recortar</span>
-        </button>
+        </button>}
       </div>
       {exportStatus && <div role="status" className="absolute top-16 right-6 z-30 rounded-xl border border-white/10 bg-[#181a27] px-4 py-2 text-xs text-white shadow-lg">{exportStatus}</div>}
     </header>

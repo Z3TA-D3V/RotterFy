@@ -1,17 +1,23 @@
-import React from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { 
   Volume2, 
   Scissors, 
   Grid3X3, 
   FileText, 
+  Mic,
   Film, 
   Sparkles, 
   HardDrive,
   ChevronLeft,
-  ChevronRight
+  ChevronRight,
+  Settings,
+  GripVertical,
+  ChevronDown,
+  Braces,
 } from 'lucide-react';
+import { sectionIds, type SectionId, type SectionVisibility } from '../utils/sectionVisibility';
 
-export type ActiveTab = 'library' | 'trimmer' | 'soundboard' | 'scripts' | 'stock' | 'prompt';
+export type ActiveTab = 'library' | 'trimmer' | 'soundboard' | 'scripts' | 'system-prompts' | 'recording' | 'stock' | 'prompt' | 'settings';
 
 interface SidebarProps {
   activeTab: ActiveTab;
@@ -19,6 +25,9 @@ interface SidebarProps {
   soundCount: number;
   isCollapsed: boolean;
   onToggleCollapse: () => void;
+  visibleSections?: SectionVisibility;
+  sectionOrder?: SectionId[];
+  onReorderSection?: (source: SectionId, target: SectionId) => void;
 }
 
 export const Sidebar: React.FC<SidebarProps> = ({
@@ -27,7 +36,83 @@ export const Sidebar: React.FC<SidebarProps> = ({
   soundCount,
   isCollapsed,
   onToggleCollapse,
+  visibleSections,
+  sectionOrder = [...sectionIds],
+  onReorderSection,
 }) => {
+  const [draggingId, setDraggingId] = useState<SectionId | null>(null);
+  const [overId, setOverId] = useState<SectionId | null>(null);
+  const pendingRef = useRef<{ id: SectionId; pointerId: number; x: number; y: number; timer: number } | null>(null);
+  const draggingRef = useRef<SectionId | null>(null);
+  const reorderRef = useRef(onReorderSection);
+  const suppressClickRef = useRef(false);
+  const suppressTimerRef = useRef<number | null>(null);
+  reorderRef.current = onReorderSection;
+
+  useEffect(() => {
+    const move = (event: PointerEvent) => {
+      const pending = pendingRef.current;
+      if (!pending || event.pointerId !== pending.pointerId) return;
+      if (!draggingRef.current) {
+        if (Math.hypot(event.clientX - pending.x, event.clientY - pending.y) > 8) {
+          window.clearTimeout(pending.timer);
+          pendingRef.current = null;
+        }
+        return;
+      }
+      event.preventDefault();
+      const target = document.elementFromPoint?.(event.clientX, event.clientY)
+        ?.closest<HTMLElement>('[data-nav-id]')?.dataset.navId as SectionId | undefined;
+      if (!target || !sectionIds.includes(target)) return;
+      setOverId(target);
+      if (target !== draggingRef.current) reorderRef.current?.(draggingRef.current, target);
+    };
+    const release = (event: PointerEvent) => {
+      const pending = pendingRef.current;
+      if (!pending || event.pointerId !== pending.pointerId) return;
+      window.clearTimeout(pending.timer);
+      pendingRef.current = null;
+      if (draggingRef.current) {
+        draggingRef.current = null;
+        setDraggingId(null); setOverId(null);
+        suppressClickRef.current = true;
+        if (suppressTimerRef.current !== null) window.clearTimeout(suppressTimerRef.current);
+        suppressTimerRef.current = window.setTimeout(() => { suppressClickRef.current = false; }, 400);
+      }
+    };
+    const blur = () => {
+      if (pendingRef.current) window.clearTimeout(pendingRef.current.timer);
+      pendingRef.current = null;
+      draggingRef.current = null;
+      setDraggingId(null); setOverId(null);
+    };
+    window.addEventListener('pointermove', move, { passive: false });
+    window.addEventListener('pointerup', release);
+    window.addEventListener('pointercancel', release);
+    window.addEventListener('blur', blur);
+    return () => {
+      window.removeEventListener('pointermove', move);
+      window.removeEventListener('pointerup', release);
+      window.removeEventListener('pointercancel', release);
+      window.removeEventListener('blur', blur);
+      if (pendingRef.current) window.clearTimeout(pendingRef.current.timer);
+      if (suppressTimerRef.current !== null) window.clearTimeout(suppressTimerRef.current);
+    };
+  }, []);
+
+  function holdToReorder(event: React.PointerEvent<HTMLButtonElement>, id: SectionId) {
+    if (event.button !== 0 || !onReorderSection) return;
+    if (pendingRef.current) window.clearTimeout(pendingRef.current.timer);
+    const pointerId = event.pointerId;
+    const timer = window.setTimeout(() => {
+      if (pendingRef.current?.pointerId !== pointerId) return;
+      draggingRef.current = id;
+      setDraggingId(id);
+      setOverId(id);
+    }, 250);
+    pendingRef.current = { id, pointerId, x: event.clientX, y: event.clientY, timer };
+  }
+
   const navItems = [
     {
       id: 'library' as ActiveTab,
@@ -56,6 +141,12 @@ export const Sidebar: React.FC<SidebarProps> = ({
       icon: FileText,
     },
     {
+      id: 'recording' as ActiveTab,
+      label: 'Teleprónter & Voz',
+      sublabel: 'Grabar y editar tomas',
+      icon: Mic,
+    },
+    {
       id: 'stock' as ActiveTab,
       label: 'B-Roll & Videos',
       sublabel: 'Minecraft / Subway',
@@ -68,6 +159,16 @@ export const Sidebar: React.FC<SidebarProps> = ({
       icon: Sparkles,
       highlight: true,
     },
+    {
+      id: 'settings' as ActiveTab,
+      label: 'Opciones',
+      sublabel: 'Personaliza tu espacio',
+      icon: Settings,
+    },
+  ];
+  const orderedItems = [
+    ...sectionOrder.map((id) => navItems.find((item) => item.id === id)).filter((item): item is typeof navItems[number] => Boolean(item)),
+    navItems.find((item) => item.id === 'settings')!,
   ];
 
   return (
@@ -111,24 +212,40 @@ export const Sidebar: React.FC<SidebarProps> = ({
         {/* Navigation Items */}
         <nav className="p-2 space-y-1 mt-2">
           {!isCollapsed && (
-            <div className="px-3 py-1.5 text-[11px] font-semibold text-neutral-300 tracking-wider">
-              CENTRO DE MANDO
+            <div className="px-3 py-1.5">
+              <p className={`text-[11px] font-semibold tracking-wider ${draggingId ? 'text-indigo-300' : 'text-neutral-300'}`}>
+                {draggingId ? 'MOVIENDO · SUELTA PARA FIJAR' : 'CENTRO DE MANDO'}
+              </p>
+              {!draggingId && onReorderSection && <p className="mt-0.5 text-[10px] text-neutral-600">Mantén 0,25 s y arrastra para ordenar</p>}
             </div>
           )}
 
-          {navItems.map((item) => {
+          {orderedItems.filter((item) => item.id === 'settings' || !visibleSections || visibleSections[item.id as keyof SectionVisibility]).map((item) => {
             const Icon = item.icon;
-            const isActive = activeTab === item.id;
+            const scriptsArea = activeTab === 'scripts' || activeTab === 'system-prompts';
+            const isActive = activeTab === item.id || (item.id === 'scripts' && scriptsArea);
+            const draggable = item.id !== 'settings';
             return (
+              <React.Fragment key={item.id}>
               <button
-                key={item.id}
-                onClick={() => onTabChange(item.id)}
-                className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-left transition-all group ${
-                  isActive
-                    ? 'bg-white/12 text-white font-medium shadow-sm border border-white/15'
-                    : 'text-neutral-400 hover:text-neutral-200 hover:bg-white/5'
+                data-nav-id={draggable ? item.id : undefined}
+                aria-grabbed={draggable ? draggingId === item.id : undefined}
+                onPointerDown={draggable ? (event) => holdToReorder(event, item.id as SectionId) : undefined}
+                onContextMenu={(event) => { if (draggingId === item.id) event.preventDefault(); }}
+                onClick={() => {
+                  if (suppressClickRef.current) { suppressClickRef.current = false; return; }
+                  onTabChange(item.id);
+                }}
+                className={`relative w-full flex items-center gap-3 px-3 py-2.5 rounded-xl border text-left transition-[background-color,border-color,box-shadow,transform] duration-150 group ${draggable ? 'cursor-grab touch-none' : 'mt-3'} ${
+                  draggingId === item.id
+                    ? 'z-10 scale-[1.03] cursor-grabbing border-indigo-400 bg-indigo-500/25 text-white shadow-lg shadow-indigo-500/25 ring-2 ring-indigo-400/50'
+                    : draggingId && overId === item.id
+                      ? 'border-indigo-400/70 bg-indigo-500/15 text-white'
+                      : isActive
+                        ? 'bg-white/12 text-white font-medium shadow-sm border-white/15'
+                        : 'border-transparent text-neutral-400 hover:text-neutral-200 hover:bg-white/5'
                 }`}
-                title={isCollapsed ? item.label : undefined}
+                title={isCollapsed ? item.label : draggable ? 'Mantén pulsado 0,25 segundos para cambiar el orden' : undefined}
               >
                 <div
                   className={`w-8 h-8 rounded-lg flex items-center justify-center shrink-0 transition-colors ${
@@ -161,7 +278,20 @@ export const Sidebar: React.FC<SidebarProps> = ({
                     </p>
                   </div>
                 )}
+                {item.id === 'scripts' && !isCollapsed && (scriptsArea ? <ChevronDown aria-hidden="true" className="h-4 w-4 shrink-0 text-neutral-400" /> : <ChevronRight aria-hidden="true" className="h-4 w-4 shrink-0 text-neutral-500" />)}
+                {draggable && !isCollapsed && <GripVertical aria-hidden="true" className={`h-4 w-4 shrink-0 transition-opacity ${draggingId === item.id ? 'text-indigo-200 opacity-100' : 'text-neutral-500 opacity-35 group-hover:opacity-100'}`} />}
               </button>
+              {item.id === 'scripts' && scriptsArea && <div className={`border-l border-indigo-400/30 ${isCollapsed ? 'ml-5 pl-1' : 'ml-7 pl-3'}`}>
+                <button onClick={() => {
+                  if (suppressClickRef.current) { suppressClickRef.current = false; return; }
+                  onTabChange('system-prompts');
+                }} aria-current={activeTab === 'system-prompts' ? 'page' : undefined}
+                  title={isCollapsed ? 'System Prompts' : undefined}
+                  className={`flex w-full items-center gap-2 rounded-lg px-2 py-2 text-left text-xs transition-colors ${activeTab === 'system-prompts' ? 'bg-indigo-500/15 text-indigo-200' : 'text-neutral-400 hover:bg-white/5 hover:text-white'}`}>
+                  <Braces aria-hidden="true" size={14} className="shrink-0" />{!isCollapsed && <span>System Prompts</span>}
+                </button>
+              </div>}
+              </React.Fragment>
             );
           })}
         </nav>
