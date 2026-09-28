@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from 'vitest';
 import { parseAssistantOutput, recoverScriptProposal, streamScriptChat } from '../../src/utils/scriptChat';
 import { script } from '../fixtures';
+import { saveMandatoryFormat } from '../../src/utils/scriptPrompts';
 
 describe('chat de guiones', () => {
   it('separa el mensaje y una propuesta parcial o completa', () => {
@@ -18,6 +19,7 @@ describe('chat de guiones', () => {
   });
 
   it('procesa un stream NDJSON y entrega el resultado persistido', async () => {
+    saveMandatoryFormat('Frases entre [NARRADOR] y [/NARRADOR].');
     const payload = [
       { type: 'delta', delta: '<chat>Vale</chat>' },
       { type: 'delta', delta: '<script># Guión</script>' },
@@ -29,6 +31,9 @@ describe('chat de guiones', () => {
     expect(onDelta).toHaveBeenLastCalledWith('<chat>Vale</chat><script># Guión</script>');
     expect(result.totalCost).toBe(0.01);
     expect(fetch).toHaveBeenCalledWith(expect.stringContaining(`/scripts/${script.id}/chat`), expect.objectContaining({ method: 'POST' }));
+    const request = vi.mocked(fetch).mock.calls[0][1] as RequestInit;
+    expect(JSON.parse(request.body as string).mandatoryFormat).toBe('Frases entre [NARRADOR] y [/NARRADOR].');
+    localStorage.removeItem('rotvault_script_mandatory_format_v1');
     vi.unstubAllGlobals();
   });
 });

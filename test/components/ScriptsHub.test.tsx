@@ -3,6 +3,7 @@ import { describe, expect, it, vi } from 'vitest';
 import { ScriptsHub } from '../../src/components/ScriptsHub';
 import { sound, script } from '../fixtures';
 import * as scriptChat from '../../src/utils/scriptChat';
+import { JOSEJU_PRESET_NAME, loadPromptPresets, savePromptPresets } from '../../src/utils/scriptPrompts';
 
 describe('ScriptsHub', () => {
   it('crea, guarda y duplica un guión con el preset inicial', async () => {
@@ -76,6 +77,90 @@ describe('ScriptsHub', () => {
     expect(screen.getByLabelText('Guión (Markdown)')).toHaveValue('# Título\n\n**Narrador**');
     fireEvent.click(screen.getByRole('button', { name: 'Salir de lectura' }));
     expect(screen.getByText('Asistente de IA')).toBeInTheDocument();
+  });
+
+  it('colapsa el asistente sin ocultar la lista o el guión y permite recuperarlo', async () => {
+    render(<ScriptsHub scripts={[{ ...script, content: '# Texto para grabar' }]} sounds={[]} onSaveScript={vi.fn()} onDeleteScript={vi.fn()} onPlaySoundById={vi.fn()} />);
+    fireEvent.click(screen.getByText(script.title));
+    expect(await screen.findByRole('heading', { name: 'Texto para grabar' })).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Colapsar asistente' }));
+    expect(screen.queryByText('Asistente de IA')).not.toBeInTheDocument();
+    expect(screen.getByLabelText('Lista de guiones')).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Texto para grabar' })).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Mostrar asistente' }));
+    expect(screen.getByText('Asistente de IA')).toBeInTheDocument();
+  });
+
+  it('ofrece una vista de narrador sin títulos ni asistente y conserva el modo anterior al volver', async () => {
+    const content = '# Título del vídeo\n\n[CORTE A NEGRO]\n[NARRADOR]Primera frase.[/NARRADOR]\n\n## Otro título\n[NARRADOR]Segunda frase.[/NARRADOR]';
+    render(<ScriptsHub scripts={[{ ...script, content }]} sounds={[]} onSaveScript={vi.fn()} onDeleteScript={vi.fn()} onPlaySoundById={vi.fn()} />);
+    fireEvent.click(screen.getByText(script.title));
+    expect(screen.getByText('Asistente de IA')).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('tab', { name: 'Vista narrador' }));
+    const narration = screen.getByLabelText('Vista narrador');
+    expect(narration).toHaveTextContent('Primera frase.');
+    expect(narration).toHaveTextContent('Segunda frase.');
+    expect(narration).not.toHaveTextContent('Título del vídeo');
+    expect(narration).not.toHaveTextContent('CORTE A NEGRO');
+    expect(narration).not.toHaveTextContent('[NARRADOR]');
+    expect(screen.queryByText('Asistente de IA')).not.toBeInTheDocument();
+    expect(screen.queryByLabelText('Título')).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Guardar' })).not.toBeInTheDocument();
+    expect(screen.getByLabelText('Lista de guiones')).toBeInTheDocument();
+    expect(narration.firstElementChild).toHaveClass('text-left');
+
+    fireEvent.click(screen.getByRole('button', { name: 'Alejar guión' }));
+    expect(narration.firstElementChild).toHaveStyle({ fontSize: '19.2px' });
+    fireEvent.click(screen.getByRole('tab', { name: 'Editar Markdown' }));
+    expect(screen.getByLabelText('Guión (Markdown)')).toHaveValue(content);
+    expect(screen.getByText('Asistente de IA')).toBeInTheDocument();
+  });
+
+  it('explica cuándo la vista de narrador no encuentra bloques de voz', () => {
+    render(<ScriptsHub scripts={[script]} sounds={[]} onSaveScript={vi.fn()} onDeleteScript={vi.fn()} onPlaySoundById={vi.fn()} />);
+    fireEvent.click(screen.getByText(script.title));
+    fireEvent.click(screen.getByRole('tab', { name: 'Vista narrador' }));
+    expect(screen.getByLabelText('Vista narrador')).toHaveTextContent('no tiene bloques [NARRADOR]');
+    expect(screen.getByLabelText('Vista narrador')).not.toHaveTextContent(script.content);
+  });
+
+  it('permite seleccionar Personalizado, editarlo y guardarlo como nuevo estilo', async () => {
+    const onSaveScript = vi.fn().mockResolvedValue(undefined);
+    render(<ScriptsHub scripts={[script]} sounds={[]} onSaveScript={onSaveScript} onDeleteScript={vi.fn()} onPlaySoundById={vi.fn()} />);
+    fireEvent.click(screen.getByText(script.title));
+    fireEvent.click(screen.getByRole('button', { name: 'Estilo de IA / System Prompt' }));
+    expect(screen.getByRole('note')).toHaveTextContent('Formato obligatorio · Global');
+    fireEvent.change(screen.getByLabelText('Preset de estilo'), { target: { value: 'Personalizado' } });
+    expect(screen.getByLabelText('Preset de estilo')).toHaveValue('Personalizado');
+    fireEvent.change(screen.getByLabelText('System Prompt'), { target: { value: 'Escribe con mi tono propio.' } });
+    fireEvent.change(screen.getByLabelText('Nombre del preset'), { target: { value: 'Mi estilo' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Guardar preset' }));
+    expect(loadPromptPresets()['Mi estilo']).toBe('Escribe con mi tono propio.');
+    expect(screen.getByLabelText('Preset de estilo')).toHaveValue('Mi estilo');
+    await waitFor(() => expect(onSaveScript).toHaveBeenCalledWith(expect.objectContaining({ systemPromptUsed: 'Escribe con mi tono propio.' })));
+    localStorage.removeItem('rotvault_script_prompt_presets_v1');
+  });
+
+  it('usa la versión editada del preset inicial al crear un guión', async () => {
+    const previous = loadPromptPresets();
+    savePromptPresets({ ...previous, [JOSEJU_PRESET_NAME]: 'Nuevo tono del canal.' });
+    const onSaveScript = vi.fn().mockResolvedValue(undefined);
+    render(<ScriptsHub scripts={[]} sounds={[]} onSaveScript={onSaveScript} onDeleteScript={vi.fn()} onPlaySoundById={vi.fn()} />);
+    fireEvent.click(screen.getByRole('button', { name: 'Crear guión' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Guardar' }));
+    await waitFor(() => expect(onSaveScript).toHaveBeenCalledWith(expect.objectContaining({ systemPromptUsed: 'Nuevo tono del canal.' })));
+    localStorage.removeItem('rotvault_script_prompt_presets_v1');
+  });
+
+  it('no reaplica un preset eliminado al crear un guión sin estilos guardados', async () => {
+    savePromptPresets({});
+    const onSaveScript = vi.fn().mockResolvedValue(undefined);
+    render(<ScriptsHub scripts={[]} sounds={[]} onSaveScript={onSaveScript} onDeleteScript={vi.fn()} onPlaySoundById={vi.fn()} />);
+    fireEvent.click(screen.getByRole('button', { name: 'Crear guión' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Guardar' }));
+    await waitFor(() => expect(onSaveScript).toHaveBeenCalledWith(expect.objectContaining({ systemPromptUsed: expect.stringContaining('asistente de escritura') })));
+    localStorage.removeItem('rotvault_script_prompt_presets_v1');
   });
 
   it('ajusta el tamaño del guión en ambos modos y recuerda la preferencia', async () => {

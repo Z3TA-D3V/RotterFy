@@ -1,4 +1,5 @@
 import type { ScriptBeat, ScriptChatMessage } from '../types';
+import { loadMandatoryFormat } from './scriptPrompts';
 
 const apiBase = (import.meta.env.VITE_API_URL || 'http://127.0.0.1:3001/api').replace(/\/$/, '');
 
@@ -26,7 +27,7 @@ export async function streamScriptChat(
 ): Promise<{ user: ScriptChatMessage; assistant: ScriptChatMessage; totalCost: number; script: ScriptBeat }> {
   const response = await fetch(`${apiBase}/scripts/${encodeURIComponent(script.id)}/chat`, {
     method: 'POST', headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ message, model: script.model || 'gpt-6-luna', reasoningEffort: script.reasoningEffort || 'low' }), signal,
+    body: JSON.stringify({ message, model: script.model || 'gpt-6-luna', reasoningEffort: script.reasoningEffort || 'low', mandatoryFormat: loadMandatoryFormat() }), signal,
   });
   if (!response.ok) {
     const body = await response.json().catch(() => ({}));
