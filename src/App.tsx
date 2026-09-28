@@ -2,7 +2,7 @@
  * RotVault - Brainrot Sound Studio & Creator Command Center
  * Designed for content creators & Angular/React developers.
  */
-import { useState, useEffect, useRef, useCallback } from 'react';
+import { lazy, Suspense, useState, useEffect, useRef, useCallback } from 'react';
 import { Sidebar, ActiveTab } from './components/Sidebar';
 import { TopHeader } from './components/TopHeader';
 import { SoundLibrary } from './components/SoundLibrary';
@@ -11,6 +11,8 @@ import { AudioTrimmerModal } from './components/AudioTrimmerModal';
 import { OpenFileModal } from './components/OpenFileModal';
 import { SoundboardMode } from './components/SoundboardMode';
 import { ScriptsHub } from './components/ScriptsHub';
+import { RecordingStudio } from './components/RecordingStudio';
+import { SettingsHub } from './components/SettingsHub';
 import { StockVideoHub } from './components/StockVideoHub';
 import { PromptEngineerModal } from './components/PromptEngineerModal';
 import { AudioPlayerBar } from './components/AudioPlayerBar';
@@ -33,6 +35,10 @@ import {
 import { loadCreatorLists } from './utils/legacyMigration';
 import { exportLocalLibrary } from './utils/libraryExport';
 import { playAudioBuffer, stopCurrentPlayback } from './utils/audioEngine';
+import { defaultSectionVisibility, loadSectionVisibility, saveSectionVisibility, type SectionId } from './utils/sectionVisibility';
+import { loadSectionOrder, moveSection, saveSectionOrder } from './utils/sectionOrder';
+
+const SystemPromptsHub = lazy(() => import('./components/SystemPromptsHub').then((module) => ({ default: module.SystemPromptsHub })));
 
 let initialDataPromise: Promise<{ sounds: SoundItem[]; scripts: ScriptBeat[]; videos: StockVideoAsset[] }> | null = null;
 
@@ -57,7 +63,9 @@ function loadInitialData() {
 
 export default function App() {
   // Navigation & Layout
-  const [activeTab, setActiveTab] = useState<ActiveTab>('library');
+  const [visibleSections, setVisibleSections] = useState(loadSectionVisibility);
+  const [sectionOrder, setSectionOrder] = useState(loadSectionOrder);
+  const [activeTab, setActiveTab] = useState<ActiveTab>(() => loadSectionVisibility().library ? 'library' : 'settings');
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
 
@@ -255,6 +263,7 @@ export default function App() {
 
   // Open Trimmer for new file
   const handleOpenTrimmerNew = () => {
+    if (!visibleSections.trimmer) return;
     stopAudio();
     setTrimmerSourceSound(null);
     setTrimmerAudioBlob(null);
@@ -292,6 +301,7 @@ export default function App() {
       <Sidebar
         activeTab={activeTab}
         onTabChange={(tab) => {
+          if (tab !== 'settings' && !visibleSections[tab === 'system-prompts' ? 'scripts' : tab]) return;
           if (tab === 'prompt') {
             setIsPromptModalOpen(true);
           } else {
@@ -302,6 +312,15 @@ export default function App() {
         soundCount={sounds.length}
         isCollapsed={isSidebarCollapsed}
         onToggleCollapse={() => setIsSidebarCollapsed(!isSidebarCollapsed)}
+        visibleSections={visibleSections}
+        sectionOrder={sectionOrder}
+        onReorderSection={(source, target) => {
+          setSectionOrder((current) => {
+            const next = moveSection(current, source, target);
+            if (next !== current) saveSectionOrder(next);
+            return next;
+          });
+        }}
       />
 
       {/* Main View Area */}
@@ -313,6 +332,8 @@ export default function App() {
           onSearchChange={setSearchQuery}
           onOpenTrimmer={handleOpenTrimmerNew}
           onOpenPrompt={() => setIsPromptModalOpen(true)}
+          showPrompt={visibleSections.prompt}
+          showTrimmer={visibleSections.trimmer}
           totalSoundsCount={sounds.length}
           onExportLibrary={handleExportLibrary}
           isExporting={isExporting}
@@ -320,10 +341,10 @@ export default function App() {
         />
 
         {/* Scrollable Workspace Body */}
-        <main className={activeTab === 'scripts'
+        <main className={activeTab === 'scripts' || activeTab === 'recording'
           ? 'flex-1 min-h-0 overflow-y-auto xl:overflow-hidden p-3 md:p-5'
           : 'flex-1 overflow-y-auto p-6 md:p-8 pb-32'}>
-          <div className={activeTab === 'scripts' ? 'h-full min-h-0 w-full' : 'max-w-7xl mx-auto space-y-6'}>
+          <div className={activeTab === 'scripts' || activeTab === 'recording' ? 'h-full min-h-0 w-full' : 'max-w-7xl mx-auto space-y-6'}>
             {/* Tab: Sound Library */}
             {activeTab === 'library' && (
               <SoundLibrary
@@ -380,6 +401,21 @@ export default function App() {
                 }}
               />
             )}
+
+            {activeTab === 'system-prompts' && <Suspense fallback={<p className="text-sm text-neutral-400">Preparando estilos…</p>}><SystemPromptsHub /></Suspense>}
+
+            {activeTab === 'recording' && <RecordingStudio scripts={scripts} />}
+
+            {activeTab === 'settings' && <SettingsHub visibleSections={visibleSections}
+              onToggleSection={(section: SectionId) => {
+                setVisibleSections((current) => {
+                  const next = { ...current, [section]: !current[section] };
+                  saveSectionVisibility(next);
+                  if (section === 'prompt' && !next.prompt) setIsPromptModalOpen(false);
+                  return next;
+                });
+              }}
+              onReset={() => { saveSectionVisibility(defaultSectionVisibility); setVisibleSections({ ...defaultSectionVisibility }); setIsPromptModalOpen(false); }} />}
 
             {/* Tab: Stock & B-Roll Hub */}
             {activeTab === 'stock' && (

@@ -5,6 +5,45 @@ import App from '../src/App';
 import { sound } from './fixtures';
 
 describe('App', () => {
+  it('abre System Prompts como subvista de Guiones y oculta el enlace al salir', async () => {
+    localStorage.setItem('rotvault_legacy_import_done', '1');
+    vi.stubGlobal('fetch', vi.fn(async () => Response.json([])));
+    render(<App />);
+    expect(screen.queryByRole('button', { name: 'System Prompts' })).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: /Guiones & Hooks/ }));
+    fireEvent.click(screen.getByRole('button', { name: 'System Prompts' }));
+    expect(await screen.findByRole('heading', { name: 'System Prompts' })).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: /Librería de Sonidos/ }));
+    expect(screen.queryByRole('button', { name: 'System Prompts' })).not.toBeInTheDocument();
+  });
+
+  it('restaura el orden guardado de los enlaces del centro de mando', () => {
+    localStorage.setItem('rotvault_section_order_v1', JSON.stringify(['scripts', 'library']));
+    localStorage.setItem('rotvault_legacy_import_done', '1');
+    vi.stubGlobal('fetch', vi.fn(async () => Response.json([])));
+    render(<App />);
+    expect([...document.querySelectorAll('[data-nav-id]')].slice(0, 2).map((item) => item.getAttribute('data-nav-id'))).toEqual(['scripts', 'library']);
+    localStorage.removeItem('rotvault_section_order_v1');
+  });
+
+  it('oculta Prompt Maestro por defecto y recuerda las secciones elegidas', async () => {
+    localStorage.removeItem('rotvault_visible_sections_v1');
+    localStorage.setItem('rotvault_legacy_import_done', '1');
+    vi.stubGlobal('fetch', vi.fn(async () => Response.json([])));
+    const view = render(<App />);
+    expect(screen.queryByRole('button', { name: /Prompt Maestro/ })).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: /Opciones/ }));
+    fireEvent.click(screen.getByLabelText('Mostrar Ingeniería Inversa'));
+    expect(screen.getAllByRole('button', { name: /Prompt Maestro/ })).toHaveLength(2);
+    view.unmount();
+    render(<App />);
+    expect(screen.getAllByRole('button', { name: /Prompt Maestro/ })).toHaveLength(2);
+    fireEvent.click(screen.getByRole('button', { name: /Opciones/ }));
+    fireEvent.click(screen.getByLabelText('Mostrar Ingeniería Inversa'));
+    expect(screen.queryByRole('button', { name: /Prompt Maestro/ })).not.toBeInTheDocument();
+    localStorage.removeItem('rotvault_visible_sections_v1');
+  });
+
   it('consulta cada catálogo una sola vez al montar en StrictMode', async () => {
     localStorage.setItem('rotvault_legacy_import_done', '1');
     const fetchMock = vi.fn(async (input: RequestInfo | URL) => {
