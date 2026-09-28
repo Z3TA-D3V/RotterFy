@@ -1,5 +1,5 @@
-import React from 'react';
-import { Play, Pause, Square, RotateCcw, Volume2, Scissors, FolderOpen } from 'lucide-react';
+import React, { useState } from 'react';
+import { Play, Pause, Square, RotateCcw, Volume2, Scissors, FolderOpen, ChevronDown, ChevronUp } from 'lucide-react';
 import { SoundItem } from '../types';
 
 interface AudioPlayerBarProps {
@@ -37,6 +37,7 @@ export const AudioPlayerBar: React.FC<AudioPlayerBarProps> = ({
   onOpenTrimmer,
   onOpenFileLocation,
 }) => {
+  const [isCollapsed, setIsCollapsed] = useState(false);
   if (!sound) return null;
 
   const speeds = [0.5, 0.75, 1.0, 1.25, 1.5, 2.0];
@@ -48,8 +49,8 @@ export const AudioPlayerBar: React.FC<AudioPlayerBarProps> = ({
   };
 
   return (
-    <div className="fixed bottom-4 left-1/2 -translate-x-1/2 z-40 w-[95%] max-w-4xl animate-slide-up">
-      <div className="glass-panel-elevated rounded-2xl p-3 border border-white/15 shadow-2xl flex flex-col md:flex-row items-center justify-between gap-3">
+    <div className={`fixed bottom-2 left-1/2 -translate-x-1/2 z-40 flex flex-col items-center animate-slide-up ${isCollapsed ? 'w-auto max-w-[95%]' : 'w-[95%] max-w-4xl'}`}>
+      {!isCollapsed && <div id="audio-player-controls" className="glass-panel-elevated w-full rounded-2xl p-3 border border-white/15 shadow-2xl flex flex-col md:flex-row items-center justify-between gap-3">
         {/* Left: Sound Cover & Metadata */}
         <div className="flex items-center gap-3 min-w-0 w-full md:w-auto">
           <div className="w-11 h-11 rounded-xl bg-neutral-900 border border-white/10 overflow-hidden shrink-0 flex items-center justify-center text-lg">
@@ -166,7 +167,18 @@ export const AudioPlayerBar: React.FC<AudioPlayerBarProps> = ({
             <FolderOpen className="w-3.5 h-3.5" />
           </button>
         </div>
-      </div>
+      </div>}
+      <button
+        type="button"
+        onClick={() => setIsCollapsed((collapsed) => !collapsed)}
+        aria-label={isCollapsed ? 'Mostrar reproductor' : 'Ocultar reproductor'}
+        aria-controls="audio-player-controls"
+        aria-expanded={!isCollapsed}
+        className={`flex items-center justify-center gap-2 border border-white/15 bg-[#20212e] px-4 text-xs font-medium text-neutral-300 shadow-lg transition-colors hover:bg-[#303249] hover:text-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-indigo-400 ${isCollapsed ? 'max-w-full rounded-xl py-2.5' : '-mt-px rounded-b-xl border-t-0 py-1'}`}
+      >
+        {isCollapsed && <span className="max-w-40 truncate">{sound.title}</span>}
+        {isCollapsed ? <ChevronUp aria-hidden="true" className="h-4 w-4 shrink-0" /> : <ChevronDown aria-hidden="true" className="h-4 w-4" />}
+      </button>
     </div>
   );
 };
