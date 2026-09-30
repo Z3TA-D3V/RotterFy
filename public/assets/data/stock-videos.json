@@ -1,1 +1,24 @@
-[]
+[
+  {
+    "id": "yt-90ed8d0c-ede5-4ded-bad5-a444ce42f117",
+    "title": "ATS: Road Trip Ford DLC - Which is the BEST Car?",
+    "category": "b-roll",
+    "format": "MP4",
+    "durationText": "09:23",
+    "notes": "",
+    "favorite": false,
+    "sourceUrl": "https://www.youtube.com/watch?v=9kkQ0ayJaCc",
+    "localPath": "/assets/videos/yt-90ed8d0c-ede5-4ded-bad5-a444ce42f117.mp4"
+  },
+  {
+    "id": "yt-b404b5ff-e43a-4b17-a8d1-3afafbcf92b8",
+    "title": "MONTAGEM PEGADORA (Slowed)",
+    "category": "b-roll",
+    "format": "MP4",
+    "durationText": "01:42",
+    "notes": "",
+    "favorite": false,
+    "sourceUrl": "https://www.youtube.com/watch?v=4E4VaL5krv8",
+    "localPath": "/assets/videos/yt-b404b5ff-e43a-4b17-a8d1-3afafbcf92b8.mp4"
+  }
+]
