@@ -8,20 +8,24 @@ El repositorio del frontend ignora `api/` para que puedas versionarla aparte.
 
 ## Iniciar en el ordenador
 
-Abre dos terminales:
+Instala las dependencias de ambos proyectos una vez:
 
 ```bash
+npm install
 cd api
 npm install
-npm run dev
+cd ..
 ```
 
+Desde la carpeta principal, inicia ambos servidores con un solo comando:
+
 ```bash
-npm install
 npm run dev
 ```
 
 Abre `http://127.0.0.1:3000`. La API escucha en `127.0.0.1:3001`.
+Pulsa Ctrl+C para detener ambos servidores. Para iniciar solo el frontend,
+usa `npm run dev:frontend`.
 
 ## Dónde se guardan los archivos
 
