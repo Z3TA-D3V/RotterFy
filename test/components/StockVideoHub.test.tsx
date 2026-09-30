@@ -9,7 +9,7 @@ describe('StockVideoHub', () => {
     const onDeleteVideo = vi.fn().mockResolvedValue(undefined);
     const file = new File(['video'], 'clip.mp4', { type: 'video/mp4' });
     const { container } = render(<StockVideoHub videos={[{ ...stockVideo, localPath: 'C:/antiguo.mp4' }]}
-      onSaveVideo={vi.fn()} onUploadVideoFile={onUploadVideoFile} onDeleteVideo={onDeleteVideo} />);
+      onSaveVideo={vi.fn()} onUploadVideoFile={onUploadVideoFile} onDeleteVideo={onDeleteVideo} onUpdateVideo={vi.fn()} onPlayVideo={vi.fn()} />);
     const input = container.querySelector('label input[type="file"]') as HTMLInputElement;
     fireEvent.change(input, { target: { files: [file] } });
     await waitFor(() => expect(onUploadVideoFile).toHaveBeenCalledWith(stockVideo.id, file));
@@ -23,7 +23,7 @@ describe('StockVideoHub', () => {
     URL.createObjectURL = vi.fn(() => 'blob:video');
     URL.revokeObjectURL = vi.fn();
     const { container } = render(<StockVideoHub videos={[]} onSaveVideo={onSaveVideo}
-      onUploadVideoFile={vi.fn()} onDeleteVideo={vi.fn()} />);
+      onUploadVideoFile={vi.fn()} onDeleteVideo={vi.fn()} onUpdateVideo={vi.fn()} onPlayVideo={vi.fn()} />);
     const original = document.createElement.bind(document);
     vi.spyOn(document, 'createElement').mockImplementation((name, options) => {
       const element = original(name, options);
@@ -40,7 +40,7 @@ describe('StockVideoHub', () => {
     const onUploadVideoFile = vi.fn().mockRejectedValueOnce(new Error('Sin espacio')).mockResolvedValueOnce(undefined);
     const file = new File(['video'], 'clip.mp4', { type: 'video/mp4' });
     const { container } = render(<StockVideoHub videos={[{ ...stockVideo, localPath: undefined }]}
-      onSaveVideo={vi.fn()} onUploadVideoFile={onUploadVideoFile} onDeleteVideo={vi.fn()} />);
+      onSaveVideo={vi.fn()} onUploadVideoFile={onUploadVideoFile} onDeleteVideo={vi.fn()} onUpdateVideo={vi.fn()} onPlayVideo={vi.fn()} />);
     const input = container.querySelector('label input[type="file"]') as HTMLInputElement;
     fireEvent.change(input, { target: { files: [file] } });
     expect(await screen.findByRole('alert')).toHaveTextContent('Sin espacio');
@@ -55,7 +55,7 @@ describe('StockVideoHub', () => {
     URL.createObjectURL = vi.fn(() => 'blob:video-error');
     URL.revokeObjectURL = vi.fn();
     const { container } = render(<StockVideoHub videos={[]} onSaveVideo={onSaveVideo}
-      onUploadVideoFile={vi.fn()} onDeleteVideo={vi.fn()} />);
+      onUploadVideoFile={vi.fn()} onDeleteVideo={vi.fn()} onUpdateVideo={vi.fn()} onPlayVideo={vi.fn()} />);
     const original = document.createElement.bind(document);
     vi.spyOn(document, 'createElement').mockImplementation((name, options) => {
       const element = original(name, options);
@@ -74,12 +74,40 @@ describe('StockVideoHub', () => {
   it('filtra las fichas y comunica el error de borrado', async () => {
     const onDeleteVideo = vi.fn().mockRejectedValue(new Error('No se pudo borrar'));
     render(<StockVideoHub videos={[stockVideo, { ...stockVideo, id: 'other', title: 'Otro', category: 'parkour' }]}
-      onSaveVideo={vi.fn()} onUploadVideoFile={vi.fn()} onDeleteVideo={onDeleteVideo} />);
+      onSaveVideo={vi.fn()} onUploadVideoFile={vi.fn()} onDeleteVideo={onDeleteVideo} onUpdateVideo={vi.fn()} onPlayVideo={vi.fn()} />);
     fireEvent.click(screen.getByRole('button', { name: 'parkour' }));
     expect(screen.getByText('Otro')).toBeInTheDocument();
     expect(screen.queryByRole('heading', { name: stockVideo.title })).not.toBeInTheDocument();
     fireEvent.click(screen.getByRole('button', { name: /Eliminar/ }));
     expect(await screen.findByRole('alert')).toHaveTextContent('No se pudo borrar');
     expect(screen.getByText('Otro')).toBeInTheDocument();
+  });
+
+  it('guarda una categoría personalizada para un vídeo existente', async () => {
+    const onUpdateVideo = vi.fn().mockResolvedValue(undefined);
+    render(<StockVideoHub videos={[stockVideo]} onSaveVideo={vi.fn()} onUploadVideoFile={vi.fn()}
+      onDeleteVideo={vi.fn()} onUpdateVideo={onUpdateVideo} onPlayVideo={vi.fn()} />);
+    fireEvent.change(screen.getByLabelText(`Categoría de ${stockVideo.title}`), { target: { value: 'Montajes' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Guardar categoría' }));
+    await waitFor(() => expect(onUpdateVideo).toHaveBeenCalledWith(expect.objectContaining({ id: stockVideo.id, category: 'Montajes' })));
+  });
+
+  it('ofrece la descarga sobre la imagen sin activar la reproducción', () => {
+    render(<StockVideoHub videos={[{ ...stockVideo, localPath: `/assets/videos/${stockVideo.id}.mp4` }]}
+      onSaveVideo={vi.fn()} onUploadVideoFile={vi.fn()} onDeleteVideo={vi.fn()} onUpdateVideo={vi.fn()} onPlayVideo={vi.fn()} />);
+    const download = screen.getByRole('link', { name: `Descargar archivo de ${stockVideo.title}` });
+    expect(download).toHaveAttribute('href',
+      expect.stringContaining(`/downloads/${stockVideo.id}/file`));
+    expect(screen.getByRole('button', { name: `Reproducir ${stockVideo.title}` }).contains(download)).toBe(false);
+    expect(download).toHaveClass('absolute', 'right-3', 'top-3');
+  });
+
+  it('abre el reproductor flotante al pulsar la tarjeta sin controles de vídeo locales', () => {
+    const onPlayVideo = vi.fn();
+    const { container } = render(<StockVideoHub videos={[{ ...stockVideo, localPath: `/assets/videos/${stockVideo.id}.mp4` }]}
+      onSaveVideo={vi.fn()} onUploadVideoFile={vi.fn()} onDeleteVideo={vi.fn()} onUpdateVideo={vi.fn()} onPlayVideo={onPlayVideo} />);
+    expect(container.querySelector('video')).not.toHaveAttribute('controls');
+    fireEvent.click(screen.getByRole('button', { name: `Reproducir ${stockVideo.title}` }));
+    expect(onPlayVideo).toHaveBeenCalledWith(expect.objectContaining({ id: stockVideo.id }));
   });
 });

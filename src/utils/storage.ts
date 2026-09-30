@@ -45,3 +45,5 @@ export function assetUrl(path?: string): string | undefined {
   if (path?.startsWith('/assets/images/')) return `${apiBase}/images/${encodeURIComponent(path.split('/').pop() || '')}`;
   return path;
 }
+
+export const assetDownloadUrl = (id: string): string => `${apiBase}/downloads/${encodeURIComponent(id)}/file`;

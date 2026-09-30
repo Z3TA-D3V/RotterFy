@@ -1,4 +1,4 @@
-export const sectionIds = ['library', 'trimmer', 'soundboard', 'scripts', 'recording', 'stock', 'prompt'] as const;
+export const sectionIds = ['library', 'trimmer', 'soundboard', 'scripts', 'recording', 'stock', 'downloads', 'prompt'] as const;
 export type SectionId = typeof sectionIds[number];
 export type SectionVisibility = Record<SectionId, boolean>;
 
@@ -11,6 +11,7 @@ export const defaultSectionVisibility: SectionVisibility = {
   scripts: true,
   recording: true,
   stock: true,
+  downloads: true,
   prompt: false,
 };
 

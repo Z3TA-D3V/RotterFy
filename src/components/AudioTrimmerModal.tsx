@@ -226,6 +226,7 @@ export const AudioTrimmerModal: React.FC<AudioTrimmerModalProps> = ({
       originalFileName: fileName,
       folder: folder || 'Recortes',
       sourceType: 'trimmed-clip',
+      sourceUrl: initialSound?.sourceUrl,
       audioBlob: wavBlob,
     };
 

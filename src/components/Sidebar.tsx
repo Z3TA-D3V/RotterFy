@@ -5,7 +5,8 @@ import {
   Grid3X3, 
   FileText, 
   Mic,
-  Film, 
+  Film,
+  Download,
   Sparkles, 
   HardDrive,
   ChevronLeft,
@@ -17,7 +18,7 @@ import {
 } from 'lucide-react';
 import { sectionIds, type SectionId, type SectionVisibility } from '../utils/sectionVisibility';
 
-export type ActiveTab = 'library' | 'trimmer' | 'soundboard' | 'scripts' | 'system-prompts' | 'recording' | 'stock' | 'prompt' | 'settings';
+export type ActiveTab = 'library' | 'trimmer' | 'soundboard' | 'scripts' | 'system-prompts' | 'recording' | 'stock' | 'downloads' | 'prompt' | 'settings';
 
 interface SidebarProps {
   activeTab: ActiveTab;
@@ -151,6 +152,12 @@ export const Sidebar: React.FC<SidebarProps> = ({
       label: 'B-Roll & Videos',
       sublabel: 'Minecraft / Subway',
       icon: Film,
+    },
+    {
+      id: 'downloads' as ActiveTab,
+      label: 'Descargas',
+      sublabel: 'YouTube: vídeo o audio',
+      icon: Download,
     },
     {
       id: 'prompt' as ActiveTab,

@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Play, Pause, Square, RotateCcw, Volume2, Scissors, FolderOpen, ChevronDown, ChevronUp } from 'lucide-react';
+import { Play, Pause, Square, RotateCcw, Volume2, Scissors, FolderOpen, ChevronDown, ChevronUp, X } from 'lucide-react';
 import { SoundItem } from '../types';
 
 interface AudioPlayerBarProps {
@@ -13,6 +13,7 @@ interface AudioPlayerBarProps {
   volume: number;
   onTogglePlay: () => void;
   onStop: () => void;
+  onDismiss: () => void;
   onToggleLoop: () => void;
   onChangeSpeed: (speed: number) => void;
   onChangeVolume: (vol: number) => void;
@@ -31,6 +32,7 @@ export const AudioPlayerBar: React.FC<AudioPlayerBarProps> = ({
   volume,
   onTogglePlay,
   onStop,
+  onDismiss,
   onToggleLoop,
   onChangeSpeed,
   onChangeVolume,
@@ -168,17 +170,23 @@ export const AudioPlayerBar: React.FC<AudioPlayerBarProps> = ({
           </button>
         </div>
       </div>}
-      <button
-        type="button"
-        onClick={() => setIsCollapsed((collapsed) => !collapsed)}
-        aria-label={isCollapsed ? 'Mostrar reproductor' : 'Ocultar reproductor'}
-        aria-controls="audio-player-controls"
-        aria-expanded={!isCollapsed}
-        className={`flex items-center justify-center gap-2 border border-white/15 bg-[#20212e] px-4 text-xs font-medium text-neutral-300 shadow-lg transition-colors hover:bg-[#303249] hover:text-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-indigo-400 ${isCollapsed ? 'max-w-full rounded-xl py-2.5' : '-mt-px rounded-b-xl border-t-0 py-1'}`}
-      >
-        {isCollapsed && <span className="max-w-40 truncate">{sound.title}</span>}
-        {isCollapsed ? <ChevronUp aria-hidden="true" className="h-4 w-4 shrink-0" /> : <ChevronDown aria-hidden="true" className="h-4 w-4" />}
-      </button>
+      <div className="flex items-center gap-1">
+        <button
+          type="button"
+          onClick={() => setIsCollapsed((collapsed) => !collapsed)}
+          aria-label={isCollapsed ? 'Mostrar reproductor' : 'Ocultar reproductor'}
+          aria-controls="audio-player-controls"
+          aria-expanded={!isCollapsed}
+          className={`flex items-center justify-center gap-2 border border-white/15 bg-[#20212e] px-4 text-xs font-medium text-neutral-300 shadow-lg transition-colors hover:bg-[#303249] hover:text-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-indigo-400 ${isCollapsed ? 'max-w-full rounded-xl py-2.5' : '-mt-px rounded-b-xl border-t-0 py-1'}`}
+        >
+          {isCollapsed && <span className="max-w-40 truncate">{sound.title}</span>}
+          {isCollapsed ? <ChevronUp aria-hidden="true" className="h-4 w-4 shrink-0" /> : <ChevronDown aria-hidden="true" className="h-4 w-4" />}
+        </button>
+        <button type="button" onClick={onDismiss} aria-label="Cerrar reproductor de audio" title="Cerrar reproductor de audio"
+          className={`border border-rose-500/40 bg-rose-500/15 px-2 text-rose-300 shadow-lg hover:bg-rose-500/25 hover:text-rose-100 ${isCollapsed ? 'rounded-xl py-2.5' : '-mt-px rounded-b-xl border-t-0 py-1'}`}>
+          <X aria-hidden="true" className="h-4 w-4" />
+        </button>
+      </div>
     </div>
   );
 };

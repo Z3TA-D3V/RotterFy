@@ -229,6 +229,7 @@ export const StudioWorkspace: React.FC<StudioWorkspaceProps> = ({
       originalFileName: fileName,
       folder: folder || 'Recortes',
       sourceType: 'trimmed-clip',
+      sourceUrl: initialSound?.sourceUrl,
       audioBlob: wavBlob,
     };
 

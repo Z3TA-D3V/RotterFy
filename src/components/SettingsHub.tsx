@@ -16,6 +16,7 @@ const sections: { id: SectionId; label: string; detail: string }[] = [
   { id: 'scripts', label: 'Guiones & Hooks', detail: 'Escribe y mejora tus guiones.' },
   { id: 'recording', label: 'Teleprónter & Voz', detail: 'Lee, graba y edita tomas de voz.' },
   { id: 'stock', label: 'B-Roll & Vídeos', detail: 'Gestiona recursos visuales.' },
+  { id: 'downloads', label: 'Descargas', detail: 'Descarga vídeo o audio de YouTube en la API local.' },
   { id: 'prompt', label: 'Ingeniería Inversa', detail: 'Muestra el acceso a Prompt Maestro.' },
 ];
 

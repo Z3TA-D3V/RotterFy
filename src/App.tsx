@@ -3,6 +3,7 @@
  * Designed for content creators & Angular/React developers.
  */
 import { lazy, Suspense, useState, useEffect, useRef, useCallback } from 'react';
+import { flushSync } from 'react-dom';
 import { Sidebar, ActiveTab } from './components/Sidebar';
 import { TopHeader } from './components/TopHeader';
 import { SoundLibrary } from './components/SoundLibrary';
@@ -14,6 +15,9 @@ import { ScriptsHub } from './components/ScriptsHub';
 import { RecordingStudio } from './components/RecordingStudio';
 import { SettingsHub } from './components/SettingsHub';
 import { StockVideoHub } from './components/StockVideoHub';
+import { DownloadHub } from './components/DownloadHub';
+import { VideoPlayerBar, type VideoPlayerHandle } from './components/VideoPlayerBar';
+import { videoCategories } from './utils/videoCategories';
 import { PromptEngineerModal } from './components/PromptEngineerModal';
 import { AudioPlayerBar } from './components/AudioPlayerBar';
 import { SoundItem, ScriptBeat, StockVideoAsset } from './types';
@@ -31,6 +35,7 @@ import {
   saveStockVideo,
   deleteStockVideo,
   uploadStockVideoFile,
+  getStockVideos,
 } from './utils/storage';
 import { loadCreatorLists } from './utils/legacyMigration';
 import { exportLocalLibrary } from './utils/libraryExport';
@@ -67,6 +72,7 @@ export default function App() {
   const [sectionOrder, setSectionOrder] = useState(loadSectionOrder);
   const [activeTab, setActiveTab] = useState<ActiveTab>(() => loadSectionVisibility().library ? 'library' : 'settings');
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
+  const [hasOpenedDownloads, setHasOpenedDownloads] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
 
   // Data Stores
@@ -88,6 +94,8 @@ export default function App() {
 
   // Playback State
   const [currentPlayingSound, setCurrentPlayingSound] = useState<SoundItem | null>(null);
+  const [currentPlayingVideo, setCurrentPlayingVideo] = useState<StockVideoAsset | null>(null);
+  const [videoPlayerSession, setVideoPlayerSession] = useState(0);
   const [isPlaying, setIsPlaying] = useState(false);
   const [playbackProgress, setPlaybackProgress] = useState(0);
   const [currentTime, setCurrentTime] = useState(0);
@@ -97,6 +105,7 @@ export default function App() {
   const [volume, setVolume] = useState(1.0);
 
   const playbackControllerRef = useRef<{ stop: () => void } | null>(null);
+  const videoPlayerRef = useRef<VideoPlayerHandle>(null);
   const playbackRequestRef = useRef(0);
   const animFrameRef = useRef<number | null>(null);
   const playStartTimeRef = useRef<number>(0);
@@ -142,6 +151,7 @@ export default function App() {
   // Play a sound from library or soundboard
   const playSound = useCallback(
     async (sound: SoundItem, speed = playbackSpeed) => {
+      setCurrentPlayingVideo(null);
       stopAudio();
       const request = playbackRequestRef.current;
       let buffer: AudioBuffer | null;
@@ -295,6 +305,12 @@ export default function App() {
     setIsOpenFileModalOpen(true);
   };
 
+  const refreshDownloadedMedia = useCallback(async () => {
+    const [loadedSounds, loadedVideos] = await Promise.all([initSoundLibrary(), getStockVideos()]);
+    setSounds(loadedSounds);
+    setStockVideos(loadedVideos);
+  }, []);
+
   return (
     <div className="flex h-screen w-screen overflow-hidden bg-[#0c0d12] text-neutral-100 font-sans selection:bg-indigo-500/20 selection:text-indigo-300">
       {/* Google AI Studio Style Left Sidebar */}
@@ -306,6 +322,7 @@ export default function App() {
             setIsPromptModalOpen(true);
           } else {
             stopAudio();
+            if (tab === 'downloads') setHasOpenedDownloads(true);
             setActiveTab(tab);
           }
         }}
@@ -421,6 +438,20 @@ export default function App() {
             {activeTab === 'stock' && (
               <StockVideoHub
                 videos={stockVideos}
+                onPlayVideo={(video) => {
+                  stopAudio();
+                  setCurrentPlayingSound(null);
+                  // Mount the player during the card click so play() keeps the browser's user gesture.
+                  flushSync(() => {
+                    setCurrentPlayingVideo(video);
+                    setVideoPlayerSession((current) => current + 1);
+                  });
+                  videoPlayerRef.current?.play();
+                }}
+                onUpdateVideo={async (video) => {
+                  const saved = await saveStockVideo(video);
+                  setStockVideos((prev) => prev.map((item) => item.id === saved.id ? saved : item));
+                }}
                 onSaveVideo={async (v, file) => {
                   const saved = await saveStockVideo(v, file);
                   setStockVideos((prev) => [saved, ...prev.filter((i) => i.id !== saved.id)]);
@@ -431,10 +462,12 @@ export default function App() {
                 }}
                 onDeleteVideo={async (id) => {
                   await deleteStockVideo(id);
+                  setCurrentPlayingVideo((current) => current?.id === id ? null : current);
                   setStockVideos((prev) => prev.filter((item) => item.id !== id));
                 }}
               />
             )}
+            {hasOpenedDownloads && <div className={activeTab === 'downloads' ? '' : 'hidden'}><DownloadHub onCompleted={refreshDownloadedMedia} categories={videoCategories(stockVideos)} /></div>}
           </div>
         </main>
       </div>
@@ -458,6 +491,7 @@ export default function App() {
             }
           }}
           onStop={stopAudio}
+          onDismiss={() => { stopAudio(); setCurrentPlayingSound(null); }}
           onToggleLoop={() => setIsLooping(!isLooping)}
           onChangeSpeed={handleSpeedChange}
           onChangeVolume={setVolume}
@@ -465,6 +499,8 @@ export default function App() {
           onOpenFileLocation={handleOpenFileLocation}
         />
       )}
+      {currentPlayingVideo && <VideoPlayerBar ref={videoPlayerRef} key={`${currentPlayingVideo.id}-${videoPlayerSession}`} video={currentPlayingVideo}
+        onClose={() => setCurrentPlayingVideo(null)} />}
 
       {/* Trimmer Studio Modal */}
       <AudioTrimmerModal

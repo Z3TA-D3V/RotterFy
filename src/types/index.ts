@@ -16,6 +16,7 @@ export interface SoundItem {
   originalFileName?: string;
   folder?: string;
   sourceType: 'trimmed-clip' | 'published';
+  sourceUrl?: string;
 }
 
 export interface ScriptBeat {
@@ -46,10 +47,11 @@ export interface ScriptChatMessage {
 export interface StockVideoAsset {
   id: string;
   title: string;
-  category: 'parkour' | 'gameplay' | 'satisfying' | 'b-roll';
+  category: string;
   format: string;
   durationText: string;
   localPath?: string;
   notes: string;
   favorite: boolean;
+  sourceUrl?: string;
 }

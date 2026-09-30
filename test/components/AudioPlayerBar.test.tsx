@@ -10,7 +10,7 @@ describe('AudioPlayerBar', () => {
     const onOpenTrimmer = vi.fn();
     render(<AudioPlayerBar sound={sound} isPlaying={false} progress={0.5} currentTime={1}
       duration={2} isLooping={false} playbackSpeed={1} volume={1} onTogglePlay={onTogglePlay}
-      onStop={vi.fn()} onToggleLoop={vi.fn()} onChangeSpeed={onChangeSpeed}
+      onStop={vi.fn()} onDismiss={vi.fn()} onToggleLoop={vi.fn()} onChangeSpeed={onChangeSpeed}
       onChangeVolume={vi.fn()} onOpenTrimmer={onOpenTrimmer} onOpenFileLocation={vi.fn()} />);
     fireEvent.click(screen.getByRole('button', { name: '1.5x' }));
     fireEvent.click(screen.getByTitle('Recortar en Estudio'));
@@ -24,7 +24,7 @@ describe('AudioPlayerBar', () => {
     const onTogglePlay = vi.fn();
     const props = {
       sound, isPlaying: true, progress: 0.5, currentTime: 1, duration: 2,
-      isLooping: false, playbackSpeed: 1, volume: 1, onTogglePlay, onStop,
+      isLooping: false, playbackSpeed: 1, volume: 1, onTogglePlay, onStop, onDismiss: vi.fn(),
       onToggleLoop: vi.fn(), onChangeSpeed: vi.fn(), onChangeVolume: vi.fn(),
       onOpenTrimmer: vi.fn(), onOpenFileLocation: vi.fn(),
     };
@@ -40,5 +40,17 @@ describe('AudioPlayerBar', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Mostrar reproductor' }));
     expect(screen.getByText('1.5s / 2.0s')).toBeInTheDocument();
     expect(screen.getByTitle('Detener')).toBeInTheDocument();
+  });
+
+  it('ofrece cerrar la previsualización junto a la flecha en ambos tamaños', () => {
+    const onDismiss = vi.fn();
+    render(<AudioPlayerBar sound={sound} isPlaying progress={0.5} currentTime={1} duration={2}
+      isLooping={false} playbackSpeed={1} volume={1} onTogglePlay={vi.fn()} onStop={vi.fn()}
+      onDismiss={onDismiss} onToggleLoop={vi.fn()} onChangeSpeed={vi.fn()} onChangeVolume={vi.fn()}
+      onOpenTrimmer={vi.fn()} onOpenFileLocation={vi.fn()} />);
+    fireEvent.click(screen.getByRole('button', { name: 'Cerrar reproductor de audio' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Ocultar reproductor' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Cerrar reproductor de audio' }));
+    expect(onDismiss).toHaveBeenCalledTimes(2);
   });
 });
