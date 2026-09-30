@@ -40,5 +40,5 @@ process.on('SIGINT', () => {
 });
 process.on('SIGTERM', () => stop());
 
-start('frontend', [vite, '--host', '127.0.0.1', '--port', '3000', '--strictPort'], root);
+start('frontend', [vite, '--host', process.env.FRONTEND_HOST || '127.0.0.1', '--port', '3000', '--strictPort'], root);
 start('API', [api], fileURLToPath(new URL('../api/', import.meta.url)));
