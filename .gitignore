@@ -8,3 +8,4 @@ coverage/
 .env*
 !.env.example
 *.zip
+/public/assets/data/download-jobs.json
