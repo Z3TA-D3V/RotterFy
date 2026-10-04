@@ -8,11 +8,17 @@ El repositorio del frontend ignora `api/` para que puedas versionarla aparte.
 
 ## Descargar vídeo o audio de YouTube
 
-La sección **Descargas** acepta la URL de un vídeo y permite guardarlo como MP4
+La sección **Descargas** acepta la URL de un vídeo o Short y permite guardarlo como MP4
 en **B-Roll & Vídeos** o como WAV en la **Librería de Sonidos**. Muestra el
 progreso y permite cancelar. Solo procesa un vídeo a la vez; las listas de
-reproducción no se descargan. Las tareas se mantienen en memoria mientras la API
-está abierta; los archivos completados permanecen en sus catálogos.
+reproducción no se descargan. Puedes elegir la calidad máxima del vídeo. En los
+Shorts verticales el límite se aplica al ancho. Las tareas se guardan en
+`public/assets/data/download-jobs.json`: al reiniciar la API, las que quedaron
+interrumpidas aparecen en la lista con un botón para reintentarlas. También
+puedes reintentar tareas fallidas o canceladas. Los duplicados del mismo tipo
+se detectan antes de descargar y ofrecen el archivo ya guardado.
+El límite de tamaño se elige en el formulario de **Descargas** entre 1 y 10 GB
+por archivo; el valor predeterminado es 10 GB y se recuerda en ese navegador.
 Al completarse una descarga iniciada en ese navegador, Chrome recibe otra copia
 del archivo. Si el navegador impide la descarga automática, el botón
 **Descargar en Chrome** permite repetirla. También puedes descargar los vídeos
@@ -33,8 +39,12 @@ operativo y se actualizan por separado.
 La URL se valida como vídeo individual de YouTube. La API llama al ejecutable
 con argumentos fijos y guarda primero en un directorio temporal; actualiza el
 catálogo solo después de completar la descarga. Para vídeo se solicita MP4; si
-el vídeo no ofrece una combinación MP4 compatible, se muestra un error. Para
-audio se convierte a WAV, que puede ocupar mucho espacio en vídeos largos.
+no hay un formato MP4 compatible en la calidad elegida, la API prueba otros
+formatos y usa `ffmpeg` para convertirlos a H.264/AAC en MP4. Esta conversión
+puede tardar y usar más CPU. Si tampoco existe un formato descargable, se muestra
+el error de `yt-dlp`. Si `yt-dlp` deja las pistas MP4 y M4A separadas, la API
+intenta fusionarlas con `ffmpeg`. Para audio se convierte a WAV, que puede ocupar
+mucho espacio en vídeos largos.
 
 ### Acceso desde otro ordenador de la red privada
 
