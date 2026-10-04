@@ -1,7 +1,7 @@
 import { act, fireEvent, render, screen } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { Sidebar } from '../../src/components/Sidebar';
-import { sectionIds } from '../../src/utils/sectionVisibility';
+import { defaultSectionVisibility, sectionIds } from '../../src/utils/sectionVisibility';
 
 afterEach(() => vi.useRealTimers());
 
@@ -42,17 +42,31 @@ describe('Sidebar', () => {
     document.elementFromPoint = original;
   });
 
-  it('muestra System Prompts solo dentro del área de Guiones', () => {
+  it('muestra Teleprónter y System Prompts solo dentro del área de Guiones', () => {
     const onTabChange = vi.fn();
     const props = { onTabChange, soundCount: 0, isCollapsed: false, onToggleCollapse: vi.fn() };
     const view = render(<Sidebar {...props} activeTab="library" />);
     expect(screen.queryByRole('button', { name: 'System Prompts' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Teleprónter & Voz' })).not.toBeInTheDocument();
     view.rerender(<Sidebar {...props} activeTab="scripts" />);
+    fireEvent.click(screen.getByRole('button', { name: 'Teleprónter & Voz' }));
+    expect(onTabChange).toHaveBeenCalledWith('recording');
     fireEvent.click(screen.getByRole('button', { name: 'System Prompts' }));
     expect(onTabChange).toHaveBeenCalledWith('system-prompts');
+    view.rerender(<Sidebar {...props} activeTab="recording" />);
+    expect(screen.getByRole('button', { name: 'Teleprónter & Voz' })).toHaveAttribute('aria-current', 'page');
+    expect(screen.getByRole('button', { name: /Guiones & Hooks/ })).toHaveClass('bg-white/12');
     view.rerender(<Sidebar {...props} activeTab="system-prompts" />);
     expect(screen.getByRole('button', { name: 'System Prompts' })).toHaveAttribute('aria-current', 'page');
     view.rerender(<Sidebar {...props} activeTab="stock" />);
     expect(screen.queryByRole('button', { name: 'System Prompts' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Teleprónter & Voz' })).not.toBeInTheDocument();
+  });
+
+  it('respeta la visibilidad del Teleprónter dentro de Guiones', () => {
+    render(<Sidebar activeTab="scripts" onTabChange={vi.fn()} soundCount={0} isCollapsed={false}
+      onToggleCollapse={vi.fn()} visibleSections={{ ...defaultSectionVisibility, recording: false }} />);
+    expect(screen.queryByRole('button', { name: 'Teleprónter & Voz' })).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'System Prompts' })).toBeInTheDocument();
   });
 });

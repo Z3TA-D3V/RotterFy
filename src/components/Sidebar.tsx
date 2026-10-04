@@ -142,12 +142,6 @@ export const Sidebar: React.FC<SidebarProps> = ({
       icon: FileText,
     },
     {
-      id: 'recording' as ActiveTab,
-      label: 'Teleprónter & Voz',
-      sublabel: 'Grabar y editar tomas',
-      icon: Mic,
-    },
-    {
       id: 'stock' as ActiveTab,
       label: 'B-Roll & Videos',
       sublabel: 'Minecraft / Subway',
@@ -229,7 +223,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
 
           {orderedItems.filter((item) => item.id === 'settings' || !visibleSections || visibleSections[item.id as keyof SectionVisibility]).map((item) => {
             const Icon = item.icon;
-            const scriptsArea = activeTab === 'scripts' || activeTab === 'system-prompts';
+            const scriptsArea = activeTab === 'scripts' || activeTab === 'system-prompts' || activeTab === 'recording';
             const isActive = activeTab === item.id || (item.id === 'scripts' && scriptsArea);
             const draggable = item.id !== 'settings';
             return (
@@ -289,6 +283,14 @@ export const Sidebar: React.FC<SidebarProps> = ({
                 {draggable && !isCollapsed && <GripVertical aria-hidden="true" className={`h-4 w-4 shrink-0 transition-opacity ${draggingId === item.id ? 'text-indigo-200 opacity-100' : 'text-neutral-500 opacity-35 group-hover:opacity-100'}`} />}
               </button>
               {item.id === 'scripts' && scriptsArea && <div className={`border-l border-indigo-400/30 ${isCollapsed ? 'ml-5 pl-1' : 'ml-7 pl-3'}`}>
+                {visibleSections?.recording !== false && <button onClick={() => {
+                  if (suppressClickRef.current) { suppressClickRef.current = false; return; }
+                  onTabChange('recording');
+                }} aria-current={activeTab === 'recording' ? 'page' : undefined}
+                  title={isCollapsed ? 'Teleprónter & Voz' : undefined}
+                  className={`flex w-full items-center gap-2 rounded-lg px-2 py-2 text-left text-xs transition-colors ${activeTab === 'recording' ? 'bg-indigo-500/15 text-indigo-200' : 'text-neutral-400 hover:bg-white/5 hover:text-white'}`}>
+                  <Mic aria-hidden="true" size={14} className="shrink-0" />{!isCollapsed && <span>Teleprónter & Voz</span>}
+                </button>}
                 <button onClick={() => {
                   if (suppressClickRef.current) { suppressClickRef.current = false; return; }
                   onTabChange('system-prompts');
