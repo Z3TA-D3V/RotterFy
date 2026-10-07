@@ -1,5 +1,5 @@
-import { fireEvent, render, screen, waitFor } from '@testing-library/react';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { DownloadHub } from '../../src/components/DownloadHub';
 import { cancelDownload, downloadSavedFile, DownloadRequestError, listDownloads, retryDownload, startDownload } from '../../src/utils/downloads';
 
@@ -14,6 +14,7 @@ const job = { id: 'yt-test', url: 'https://www.youtube.com/watch?v=abcdefghijk',
   startedAt: 1, finishedAt: null, error: null };
 
 describe('DownloadHub', () => {
+  afterEach(() => { vi.useRealTimers(); });
   beforeEach(() => {
     sessionStorage.clear();
     localStorage.removeItem('rotvault_download_max_size_gb_v1');
@@ -22,6 +23,69 @@ describe('DownloadHub', () => {
     vi.mocked(retryDownload).mockReset().mockResolvedValue(job);
     vi.mocked(cancelDownload).mockReset().mockResolvedValue(job);
     vi.mocked(downloadSavedFile).mockReset();
+  });
+
+  it('deja de consultar sin tareas activas y actualiza al volver a la sección', async () => {
+    vi.useFakeTimers();
+    const view = render(<DownloadHub onCompleted={vi.fn()} categories={[]} />);
+    await act(async () => {});
+    await act(async () => { await vi.advanceTimersByTimeAsync(5000); });
+    expect(listDownloads).toHaveBeenCalledTimes(1);
+    view.rerender(<DownloadHub onCompleted={vi.fn()} categories={[]} isVisible={false} />);
+    await act(async () => { await vi.advanceTimersByTimeAsync(5000); });
+    expect(listDownloads).toHaveBeenCalledTimes(1);
+    view.rerender(<DownloadHub onCompleted={vi.fn()} categories={[]} />);
+    await act(async () => {});
+    expect(listDownloads).toHaveBeenCalledTimes(2);
+  });
+
+  it('sigue tareas ocultas y detiene las consultas al terminar', async () => {
+    vi.useFakeTimers();
+    vi.mocked(listDownloads).mockResolvedValue([job]);
+    const onCompleted = vi.fn().mockResolvedValue(undefined);
+    const view = render(<DownloadHub onCompleted={onCompleted} categories={[]} />);
+    await act(async () => {});
+    view.rerender(<DownloadHub onCompleted={onCompleted} categories={[]} isVisible={false} />);
+    await act(async () => {});
+    const callsBeforeCompletion = vi.mocked(listDownloads).mock.calls.length;
+    vi.mocked(listDownloads).mockResolvedValue([{ ...job, state: 'done', progress: 100 }]);
+    await act(async () => { await vi.advanceTimersByTimeAsync(1000); });
+    expect(onCompleted).toHaveBeenCalledTimes(1);
+    expect(screen.queryByRole('progressbar')).not.toBeInTheDocument();
+    await act(async () => { await vi.advanceTimersByTimeAsync(5000); });
+    expect(listDownloads).toHaveBeenCalledTimes(callsBeforeCompletion + 1);
+  });
+
+  it('espera la respuesta antes de programar otra consulta y cancela al desmontar', async () => {
+    vi.useFakeTimers();
+    vi.mocked(listDownloads).mockResolvedValueOnce([job]);
+    let resolveRequest!: (jobs: typeof job[]) => void;
+    vi.mocked(listDownloads).mockImplementationOnce(() => new Promise((resolve) => { resolveRequest = resolve; }));
+    const view = render(<DownloadHub onCompleted={vi.fn()} categories={[]} />);
+    await act(async () => {});
+    await act(async () => { await vi.advanceTimersByTimeAsync(6000); });
+    expect(listDownloads).toHaveBeenCalledTimes(2);
+    const signal = vi.mocked(listDownloads).mock.calls[1][0];
+    view.unmount();
+    expect(signal?.aborted).toBe(true);
+    await act(async () => { resolveRequest([job]); });
+    await act(async () => { await vi.advanceTimersByTimeAsync(5000); });
+    expect(listDownloads).toHaveBeenCalledTimes(2);
+  });
+
+  it('no reinicia las consultas al cambiar el callback de la biblioteca', async () => {
+    vi.useFakeTimers();
+    vi.mocked(listDownloads).mockResolvedValue([job]);
+    const oldCallback = vi.fn().mockResolvedValue(undefined);
+    const view = render(<DownloadHub onCompleted={oldCallback} categories={[]} />);
+    await act(async () => {});
+    const newCallback = vi.fn().mockResolvedValue(undefined);
+    view.rerender(<DownloadHub onCompleted={newCallback} categories={[]} />);
+    expect(listDownloads).toHaveBeenCalledTimes(1);
+    vi.mocked(listDownloads).mockResolvedValue([{ ...job, state: 'done' }]);
+    await act(async () => { await vi.advanceTimersByTimeAsync(1000); });
+    expect(newCallback).toHaveBeenCalledTimes(1);
+    expect(oldCallback).not.toHaveBeenCalled();
   });
 
   it('envía la URL en modo audio y muestra la tarea iniciada', async () => {

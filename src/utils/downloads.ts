@@ -34,7 +34,7 @@ async function request<T>(path: string, options?: RequestInit): Promise<T> {
   return response.json();
 }
 
-export const listDownloads = () => request<DownloadJob[]>('');
+export const listDownloads = (signal?: AbortSignal) => request<DownloadJob[]>('', { signal });
 export const startDownload = (url: string, mode: 'audio' | 'video', category?: string, quality?: VideoQuality, maxSizeGb = 10) => request<DownloadJob>('', {
   method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ url, mode, category, quality, maxSizeGb }),
 });

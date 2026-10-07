@@ -467,7 +467,7 @@ export default function App() {
                 }}
               />
             )}
-            {hasOpenedDownloads && <div className={activeTab === 'downloads' ? '' : 'hidden'}><DownloadHub onCompleted={refreshDownloadedMedia} categories={videoCategories(stockVideos)} /></div>}
+            {hasOpenedDownloads && <div className={activeTab === 'downloads' ? '' : 'hidden'}><DownloadHub onCompleted={refreshDownloadedMedia} categories={videoCategories(stockVideos)} isVisible={activeTab === 'downloads'} /></div>}
           </div>
         </main>
       </div>

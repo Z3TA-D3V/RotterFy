@@ -3,7 +3,7 @@ import { Download, Music2, Video, X } from 'lucide-react';
 import { cancelDownload, downloadSavedFile, DownloadRequestError, listDownloads, retryDownload, startDownload,
   type DownloadJob, type VideoQuality } from '../utils/downloads';
 
-interface Props { onCompleted: () => Promise<void>; categories: string[] }
+interface Props { onCompleted: () => Promise<void>; categories: string[]; isVisible?: boolean }
 
 const pendingKey = 'rotvault_browser_downloads_v1';
 const maxSizeKey = 'rotvault_download_max_size_gb_v1';
@@ -24,7 +24,9 @@ const labels: Record<DownloadJob['state'], string> = {
   interrupted: 'Interrumpida',
 };
 
-export function DownloadHub({ onCompleted, categories }: Props) {
+const isActiveJob = (job: DownloadJob) => ['checking', 'downloading', 'converting', 'saving'].includes(job.state);
+
+export function DownloadHub({ onCompleted, categories, isVisible = true }: Props) {
   const [url, setUrl] = useState('');
   const [mode, setMode] = useState<'video' | 'audio'>('video');
   const [category, setCategory] = useState('b-roll');
@@ -36,6 +38,11 @@ export function DownloadHub({ onCompleted, categories }: Props) {
   const [existingId, setExistingId] = useState<string | null>(null);
   const completed = useRef(new Set<string>());
   const pendingBrowser = useRef(loadPending());
+  const latestJobs = useRef<DownloadJob[]>([]);
+  const onCompletedRef = useRef(onCompleted);
+  const [refreshVersion, setRefreshVersion] = useState(0);
+
+  useEffect(() => { onCompletedRef.current = onCompleted; }, [onCompleted]);
 
   const savePending = () => {
     try { sessionStorage.setItem(pendingKey, JSON.stringify([...pendingBrowser.current])); }
@@ -43,16 +50,22 @@ export function DownloadHub({ onCompleted, categories }: Props) {
   };
 
   useEffect(() => {
+    if (!isVisible && !latestJobs.current.some(isActiveJob)) return;
     let active = true;
+    let timer: number | undefined;
+    const controller = new AbortController();
     const refresh = async () => {
       try {
-        const next = await listDownloads();
+        const next = await listDownloads(controller.signal);
         if (!active) return;
+        latestJobs.current = next;
         setJobs(next);
         for (const job of next) {
           if (job.state === 'done' && !completed.current.has(job.id)) {
             completed.current.add(job.id);
-            void onCompleted().catch((cause) => setError(cause instanceof Error ? cause.message : 'No se pudo actualizar la biblioteca'));
+            void onCompletedRef.current().catch((cause) => {
+              if (active) setError(cause instanceof Error ? cause.message : 'No se pudo actualizar la biblioteca');
+            });
           }
           if (job.state === 'done' && pendingBrowser.current.has(job.id)) {
             pendingBrowser.current.delete(job.id);
@@ -64,16 +77,24 @@ export function DownloadHub({ onCompleted, categories }: Props) {
       } catch (cause) {
         if (active) setError(cause instanceof Error ? cause.message : 'No se pudieron consultar las descargas');
       }
+      if (active && latestJobs.current.some(isActiveJob)) {
+        timer = window.setTimeout(() => { void refresh(); }, 1000);
+      }
     };
-    void refresh();
-    const timer = window.setInterval(() => { void refresh(); }, 1000);
-    return () => { active = false; window.clearInterval(timer); };
-  }, [onCompleted]);
+    if (refreshVersion > 0 && latestJobs.current.some(isActiveJob)) {
+      timer = window.setTimeout(() => { void refresh(); }, 1000);
+    } else {
+      void refresh();
+    }
+    return () => { active = false; window.clearTimeout(timer); controller.abort(); };
+  }, [isVisible, refreshVersion]);
 
   const remember = (job: DownloadJob) => {
     pendingBrowser.current.add(job.id);
     savePending();
-    setJobs((previous) => [job, ...previous.filter((item) => item.id !== job.id)]);
+    latestJobs.current = [job, ...latestJobs.current.filter((item) => item.id !== job.id)];
+    setJobs(latestJobs.current);
+    setRefreshVersion((version) => version + 1);
   };
 
   const submit = async (event: React.FormEvent) => {
@@ -92,7 +113,7 @@ export function DownloadHub({ onCompleted, categories }: Props) {
     finally { setBusy(false); }
   };
 
-  const activeJob = jobs.some((job) => ['checking', 'downloading', 'converting', 'saving'].includes(job.state));
+  const activeJob = jobs.some(isActiveJob);
 
   return <section className="mx-auto max-w-4xl space-y-5">
     <div className="rounded-3xl border border-white/10 bg-white/4 p-5">
